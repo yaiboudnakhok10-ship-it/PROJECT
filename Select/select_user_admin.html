@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการผู้ใช้งาน — ThaiDrill</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --accent:       #E53935;
+    --accent-dark:  #C62828;
+    --accent-light: #FFEBEE;
+    --accent-mid:   #FFCDD2;
+    --bg:           #f0f4f8;
+    --card:         #ffffff;
+    --text:         #1a1a2e;
+    --sub:          #90a4ae;
+    --border:       #f0e0e0;
+    --row-hover:    #FFF5F5;
+    --green:        #2e7d32;
+    --green-light:  #e8f5e9;
+    --red:          #c62828;
+    --red-light:    #ffebee;
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 24px 20px;
+    color: var(--text);
+  }
+
+  /* ===== CARD ===== */
+  .table-card {
+    background: var(--card);
+    border-radius: 22px;
+    box-shadow: 0 8px 40px rgba(229,57,53,0.10), 0 2px 8px rgba(0,0,0,0.04);
+    overflow: hidden;
+    width: 100%;
+  }
+
+  /* ===== HEADER ===== */
+  .table-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px;
+    border-bottom: 1.5px solid var(--border);
+    flex-wrap: wrap; gap: 12px;
+    background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+  }
+
+  .title-group { display: flex; align-items: center; gap: 14px; }
+  .title-icon {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px;
+    box-shadow: 0 4px 16px rgba(229,57,53,0.35);
+    flex-shrink: 0;
+  }
+  .title-text { font-size: 17px; font-weight: 900; color: var(--text); }
+  .title-sub  { font-size: 12px; color: var(--sub); font-weight: 600; margin-top: 2px; }
+
+  .header-controls { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--accent-light);
+    border: 1.5px solid var(--accent-mid);
+    border-radius: 12px; padding: 9px 14px;
+    transition: all 0.25s;
+  }
+  .search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(229,57,53,0.13); }
+  .search-box i { color: var(--sub); font-size: 12px; }
+  .search-box input {
+    background: none; border: none; outline: none;
+    font-size: 13px; font-family: 'Nunito', sans-serif;
+    color: var(--text); width: 190px;
+  }
+  .search-box input::placeholder { color: #b0bec5; }
+
+  .btn-reload {
+    display: flex; align-items: center; gap: 7px;
+    background: #f5f7fa; color: var(--sub);
+    border: 1.5px solid #e0e6ef; outline: none;
+    border-radius: 12px; padding: 9px 15px;
+    font-size: 13px; font-weight: 700;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer; white-space: nowrap; transition: all 0.18s;
+  }
+  .btn-reload:hover { background: var(--accent-light); border-color: var(--accent-mid); color: var(--accent); }
+
+  .btn-add {
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff; border: none; outline: none;
+    border-radius: 12px; padding: 10px 18px;
+    font-size: 13px; font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(229,57,53,0.30);
+    transition: transform 0.18s, box-shadow 0.18s;
+    white-space: nowrap;
+  }
+  .btn-add:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(229,57,53,0.42); }
+
+  /* ===== TABLE ===== */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 780px; }
+
+  thead tr th {
+    padding: 14px 18px;
+    font-size: 12.5px; font-weight: 900; color: #000000;
+    background: var(--accent-light);
+    border-bottom: 2px solid var(--accent-mid);
+    white-space: nowrap; text-align: left; vertical-align: middle;
+    letter-spacing: 0.02em;
+  }
+  thead tr th:first-child { padding-left: 28px; }
+  thead tr th:last-child  { padding-right: 28px; }
+
+  tbody tr { transition: background 0.15s; animation: fadeRow 0.3s ease both; }
+  @keyframes fadeRow {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  tbody tr:hover { background: var(--row-hover); }
+
+  tbody tr td {
+    padding: 13px 18px;
+    font-size: 13px; color: var(--text);
+    border-bottom: 1px solid #f0f5fb;
+    vertical-align: middle; white-space: nowrap;
+  }
+  tbody tr td:first-child { padding-left: 28px; }
+  tbody tr td:last-child  { padding-right: 28px; }
+  tbody tr:last-child td  { border-bottom: none; }
+
+  /* Row number */
+  .row-num {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: var(--accent-light); color: var(--accent);
+    font-size: 12px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Avatar */
+  .avatar-wrap { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 11px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; font-weight: 800; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(229,57,53,0.25);
+  }
+  .avatar-name { font-size: 13px; font-weight: 700; color: var(--text); }
+
+  /* IDEM badge */
+  .idem-badge {
+    font-family: 'Courier New', monospace;
+    font-size: 12.5px; font-weight: 700;
+    color: #C62828;
+    background: var(--accent-light);
+    padding: 3px 10px; border-radius: 7px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Status */
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 800;
+  }
+  .status-admin  { background: #ffebee; color: #c62828; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .status-fixed-wrap {
+    display: flex; align-items: center;
+    padding: 11px 15px;
+    background: #fff0f0;
+    border: 1.5px solid #FFCDD2;
+    border-radius: 12px;
+  }
+
+  /* Username */
+  .username-text { font-size: 13px; font-weight: 700; color: #37474f; }
+
+  /* Password mask */
+  .pw-group { display: flex; align-items: center; gap: 7px; }
+  .pw-mask  { font-size: 13px; color: #b0bec5; letter-spacing: 2px; }
+  .pw-show  {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: var(--accent-light); color: var(--accent);
+    border: none; cursor: pointer; font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s;
+  }
+  .pw-show:hover { background: var(--accent); color: #fff; }
+
+  /* Date */
+  .date-text { font-size: 12px; color: var(--sub); font-weight: 600; }
+
+  /* Actions */
+  .action-group { display: flex; align-items: center; gap: 8px; }
+  .act-btn {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; border: none; cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .act-edit   { background: #fff3e0; color: #e65100; box-shadow: 0 2px 8px rgba(230,81,0,0.15); }
+  .act-delete { background: var(--red-light); color: var(--red); box-shadow: 0 2px 8px rgba(198,40,40,0.15); }
+  .act-btn:hover { transform: translateY(-2px) scale(1.12); }
+  .act-edit:hover   { background: #e65100; color: #fff; box-shadow: 0 5px 14px rgba(230,81,0,0.35); }
+  .act-delete:hover { background: var(--red); color: #fff; box-shadow: 0 5px 14px rgba(198,40,40,0.35); }
+
+  .no-result { text-align:center; padding:50px 20px; color:var(--sub); font-size:14px; font-weight:600; }
+  .no-result i { font-size:36px; color:var(--accent-mid); display:block; margin-bottom:12px; }
+
+  /* ===== PANEL OVERLAY ===== */
+  .panel-overlay {
+    position:fixed; inset:0; background:rgba(10,30,60,0.38);
+    z-index:999; opacity:0; pointer-events:none; transition:opacity 0.3s;
+  }
+  .panel-overlay.open { opacity:1; pointer-events:all; }
+
+  /* ===== SLIDE PANEL ===== */
+  .slide-panel {
+    position:fixed; top:0; right:0; bottom:0; width:420px;
+    background:#fff; z-index:1000;
+    box-shadow:-8px 0 50px rgba(229,57,53,0.15);
+    display:flex; flex-direction:column;
+    transform:translateX(100%);
+    transition:transform 0.38s cubic-bezier(0.4,0,0.2,1);
+  }
+  .slide-panel.open { transform:translateX(0); }
+
+  .panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 26px;
+    border-bottom:1.5px solid var(--border);
+    background:var(--accent-light); flex-shrink:0;
+  }
+  .panel-header-left { display:flex; align-items:center; gap:12px; }
+  .panel-header-icon {
+    width:40px; height:40px; border-radius:12px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:16px;
+    box-shadow:0 3px 12px rgba(229,57,53,0.35);
+  }
+  .panel-title { font-size:15px; font-weight:900; color:var(--text); }
+  .panel-sub   { font-size:11.5px; color:var(--sub); font-weight:600; margin-top:2px; }
+  .panel-close {
+    width:34px; height:34px; border-radius:10px;
+    background:#fff; border:1.5px solid var(--accent-mid);
+    color:var(--accent); font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all 0.18s;
+  }
+  .panel-close:hover { background:var(--accent); color:#fff; }
+
+  .panel-body { flex:1; overflow-y:auto; padding:26px; display:flex; flex-direction:column; gap:20px; }
+
+  .form-group { display:flex; flex-direction:column; gap:7px; }
+  .form-label {
+    font-size:12.5px; font-weight:800; color:var(--text);
+    display:flex; align-items:center; gap:7px;
+  }
+  .form-label i { color:var(--accent); font-size:12px; }
+  .form-label .req { color:#e53935; }
+
+  .form-input, .form-select {
+    width:100%; padding:11px 15px;
+    border:1.5px solid #e0e8f4; border-radius:12px;
+    font-size:13.5px; font-weight:600;
+    font-family:'Nunito',sans-serif; color:var(--text); outline:none;
+    background:#f8fafd; transition:all 0.22s; appearance:none;
+  }
+  .form-input:focus, .form-select:focus {
+    border-color:var(--accent); background:#fff;
+    box-shadow:0 0 0 3px rgba(229,57,53,0.12);
+  }
+  .form-input::placeholder { color:#b0bec5; font-weight:500; }
+
+  .pw-input-wrap { position:relative; }
+  .pw-input-wrap .form-input { padding-right:42px; }
+  .pw-toggle {
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    background:none; border:none; cursor:pointer;
+    color:var(--sub); font-size:14px; transition:color 0.18s;
+  }
+  .pw-toggle:hover { color:var(--accent); }
+
+  .select-wrap { position:relative; }
+  .select-wrap::after {
+    content:'\f107'; font-family:'Font Awesome 6 Free'; font-weight:900;
+    position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    color:var(--accent); pointer-events:none; font-size:13px;
+  }
+
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  .divider-label {
+    display:flex; align-items:center; gap:10px;
+    font-size:11px; font-weight:800; color:var(--sub);
+    text-transform:uppercase; letter-spacing:0.07em;
+  }
+  .divider-label::before, .divider-label::after { content:''; flex:1; height:1px; background:var(--border); }
+  .divider-label i { color:var(--accent); }
+
+  /* ID display (auto) */
+  .id-display {
+    background:var(--accent-light); border:1.5px dashed var(--accent-mid);
+    border-radius:12px; padding:11px 15px;
+    font-size:13px; font-weight:700; color:var(--accent);
+    display:flex; align-items:center; gap:8px;
+  }
+  .id-display i { font-size:12px; }
+
+  .panel-footer {
+    padding:20px 26px; border-top:1.5px solid var(--border);
+    display:flex; gap:10px; flex-shrink:0;
+  }
+  .btn-cancel {
+    flex:1; padding:12px; border:1.5px solid #e0e6ef; border-radius:12px;
+    background:#f5f7fa; color:#78909c;
+    font-size:13.5px; font-weight:700;
+    font-family:'Nunito',sans-serif; cursor:pointer; transition:all 0.18s;
+  }
+  .btn-cancel:hover { background:#eceff1; }
+  .btn-save {
+    flex:2; padding:12px; border:none; border-radius:12px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+    color:#fff; font-size:13.5px; font-weight:800;
+    font-family:'Nunito',sans-serif; cursor:pointer;
+    box-shadow:0 4px 16px rgba(229,57,53,0.30); transition:all 0.18s;
+    display:flex; align-items:center; justify-content:center; gap:9px;
+  }
+  .btn-save:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(229,57,53,0.42); }
+
+  @media (max-width:480px) { .slide-panel { width:100%; } }
+  @media (max-width:640px) {
+    .search-box input { width:140px; }
+    .table-header { padding:14px 16px; }
+    tbody tr td, thead tr th { padding:11px 13px; }
+    tbody tr td:first-child, thead tr th:first-child { padding-left:16px; }
+    tbody tr td:last-child, thead tr th:last-child { padding-right:16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="table-card">
+  <!-- Header -->
+  <div class="table-header">
+    <div class="title-group">
+      <div class="title-icon"><i class="fa fa-users-gear"></i></div>
+      <div>
+        <div class="title-text">จัดการผู้ใช้งาน</div>
+        <div class="title-sub" id="totalLabel">กำลังโหลดข้อมูล...</div>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <i class="fa fa-magnifying-glass"></i>
+        <input type="text" id="searchInput" placeholder="ค้นหาชื่อ, IDEM, UserName..." oninput="filterTable(this.value)">
+      </div>
+      <button class="btn-reload" onclick="loadUsers()">
+        <i class="fa fa-rotate-right"></i> รีโหลด
+      </button>
+      <button class="btn-add" onclick="openPanel('add')">
+        <i class="fa fa-user-plus"></i> เพิ่มผู้ใช้
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>ชื่อ-นามสกุล</th>
+          <th>IDEM</th>
+          <th>Status</th>
+          <th>UserName</th>
+          <th>Password</th>
+          <th>วันที่บันทึก</th>
+          <th>จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr>
+          <td colspan="8" style="text-align:center;padding:50px;color:#90a4ae;">
+            <i class="fa fa-spinner fa-spin" style="font-size:24px;color:#E53935;display:block;margin-bottom:12px;"></i>
+            <span style="font-size:13px;">กำลังโหลดข้อมูล...</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div id="noResult" class="no-result" style="display:none;">
+      <i class="fa fa-user-slash"></i>ไม่พบผู้ใช้ที่ค้นหา
+    </div>
+  </div>
+</div>
+
+<!-- Panel Overlay -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+
+<!-- Slide Panel -->
+<div class="slide-panel" id="slidePanel">
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <div class="panel-header-icon" id="panelIcon"><i class="fa fa-user-plus"></i></div>
+      <div>
+        <div class="panel-title" id="panelTitle">เพิ่มผู้ใช้ใหม่</div>
+        <div class="panel-sub"  id="panelSub">กรอกข้อมูลผู้ใช้งานระบบ</div>
+      </div>
+    </div>
+    <div class="panel-close" onclick="closePanel()"><i class="fa fa-xmark"></i></div>
+  </div>
+
+  <div class="panel-body">
+
+    <div class="divider-label"><i class="fa fa-circle-info"></i> ข้อมูลส่วนตัว</div>
+
+    <div class="form-group">
+      <label class="form-label"><i class="fa fa-user"></i> ชื่อ-นามสกุล <span class="req">*</span></label>
+      <input type="text" class="form-input" id="f_name" placeholder="เช่น Yai Boudnakhok">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label"><i class="fa fa-id-card"></i> IDEM <span class="req">*</span></label>
+        <input type="text" class="form-input" id="f_idem" placeholder="เช่น L2509021">
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fa fa-shield-halved"></i> Status</label>
+        <div class="status-fixed-wrap">
+          <span class="status-pill status-admin"><span class="status-dot"></span> admin</span>
+          <input type="hidden" id="f_status" value="admin">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider-label"><i class="fa fa-lock"></i> ข้อมูลเข้าสู่ระบบ</div>
+
+    <div class="form-group">
+      <label class="form-label"><i class="fa fa-at"></i> UserName <span class="req">*</span></label>
+      <input type="text" class="form-input" id="f_username" placeholder="เช่น L2509021">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label"><i class="fa fa-key"></i> Password <span class="req">*</span></label>
+      <div class="pw-input-wrap">
+        <input type="password" class="form-input" id="f_password" placeholder="รหัสผ่าน">
+        <button type="button" class="pw-toggle" onclick="togglePw('f_password','eyeIcon1')" id="eyeIcon1">
+          <i class="fa fa-eye"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn-cancel" onclick="closePanel()">ยกเลิก</button>
+    <button class="btn-save" onclick="saveForm()">
+      <i class="fa fa-floppy-disk"></i>
+      <span id="saveBtnText">บันทึกข้อมูล</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ⚙️ CONFIG
+// ============================================================
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbxB9hYm2W8peD6K1mTx05mFNlAtzEiqAcNIr9OxUQ_Lq-8AdZcc1Su0l_pVrnt_3yE/exec';
+
+var _editRowIndex      = null;
+var _editSheetRowIndex = null;
+
+// ============================================================
+// PANEL
+// ============================================================
+function openPanel(mode, rowData) {
+  _editRowIndex      = null;
+  _editSheetRowIndex = null;
+
+  var icon    = document.getElementById('panelIcon');
+  var title   = document.getElementById('panelTitle');
+  var sub     = document.getElementById('panelSub');
+  var saveBtn = document.getElementById('saveBtnText');
+
+  ['f_name','f_idem','f_username','f_password'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  // f_status fixed = admin
+
+  // reset pw type
+  document.getElementById('f_password').type = 'password';
+
+  if (mode === 'edit' && rowData) {
+    _editRowIndex      = rowData.index;
+    _editSheetRowIndex = rowData.sheetRowIndex;
+    icon.innerHTML     = '<i class="fa fa-user-pen"></i>';
+    title.textContent  = 'แก้ไขข้อมูลผู้ใช้';
+    sub.textContent    = 'UserName: ' + rowData.username;
+    saveBtn.textContent = 'บันทึกการแก้ไข';
+    document.getElementById('f_name').value     = rowData.name;
+    document.getElementById('f_idem').value     = rowData.idem;
+    // f_status fixed = admin (always)
+    document.getElementById('f_username').value = rowData.username;
+    document.getElementById('f_password').value = rowData.password;
+  } else {
+    icon.innerHTML     = '<i class="fa fa-user-plus"></i>';
+    title.textContent  = 'เพิ่มผู้ใช้ใหม่';
+    sub.textContent    = 'กรอกข้อมูลผู้ใช้งานระบบ';
+    saveBtn.textContent = 'บันทึกข้อมูล';
+  }
+
+  document.getElementById('slidePanel').classList.add('open');
+  document.getElementById('panelOverlay').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('slidePanel').classList.remove('open');
+  document.getElementById('panelOverlay').classList.remove('open');
+}
+
+function togglePw(inputId, btnId) {
+  var inp = document.getElementById(inputId);
+  var btn = document.getElementById(btnId);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.innerHTML = '<i class="fa fa-eye-slash"></i>';
+  } else {
+    inp.type = 'password';
+    btn.innerHTML = '<i class="fa fa-eye"></i>';
+  }
+}
+
+// ============================================================
+// SAVE
+// ============================================================
+function saveForm() {
+  var name     = document.getElementById('f_name').value.trim();
+  var idem     = document.getElementById('f_idem').value.trim();
+  var status   = document.getElementById('f_status').value.trim();
+  var username = document.getElementById('f_username').value.trim();
+  var password = document.getElementById('f_password').value.trim();
+  var isEdit   = _editRowIndex !== null;
+
+  if (!name || !idem || !username || !password) {
+    Swal.fire({ icon:'warning', title:'ข้อมูลไม่ครบ!', text:'กรุณากรอกข้อมูลให้ครบทุกช่อง', confirmButtonColor:'#E53935', confirmButtonText:'ตกลง' });
+    return;
+  }
+
+  Swal.fire({ title: isEdit ? 'กำลังบันทึก...' : 'กำลังเพิ่มผู้ใช้...', allowOutsideClick:false, didOpen:function(){ Swal.showLoading(); } });
+
+  var action = isEdit ? 'updateAdminUser' : 'saveAdminUser';
+  var url = GAS_URL
+    + '?action='   + encodeURIComponent(action)
+    + '&name='     + encodeURIComponent(name)
+    + '&idem='     + encodeURIComponent(idem)
+    + '&status='   + encodeURIComponent(status)
+    + '&username=' + encodeURIComponent(username)
+    + '&password=' + encodeURIComponent(password);
+  if (isEdit && _editSheetRowIndex) {
+    url += '&rowIndex=' + encodeURIComponent(_editSheetRowIndex);
+  }
+
+  fetch(url)
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      if (!data.ok) {
+        Swal.fire({ icon:'error', title:'บันทึกไม่สำเร็จ', text: data.message || 'เกิดข้อผิดพลาด', confirmButtonColor:'#E53935' });
+        return;
+      }
+      closePanel();
+      loadUsers();
+      Swal.fire({ icon:'success', title: isEdit ? 'แก้ไขสำเร็จ!' : 'เพิ่มผู้ใช้สำเร็จ!', toast:true, position:'top-end', showConfirmButton:false, timer:2500, timerProgressBar:true });
+    })
+    .catch(function(err){
+      Swal.fire({ icon:'error', title:'เชื่อมต่อไม่ได้', text: err.message, confirmButtonColor:'#E53935' });
+    });
+}
+
+// ============================================================
+// EDIT
+// ============================================================
+function editRow(btn) {
+  var row   = btn.closest('tr');
+  var tbody = document.getElementById('tableBody');
+  var index = Array.from(tbody.rows).indexOf(row);
+  var sheetRowIndex = row.getAttribute('data-sheet-row');
+  var d = JSON.parse(row.getAttribute('data-row') || '{}');
+  openPanel('edit', {
+    index:        index,
+    sheetRowIndex: sheetRowIndex ? parseInt(sheetRowIndex) : null,
+    name:     d.name     || '',
+    idem:     d.idem     || '',
+    status:   d.status   || '',
+    username: d.username || '',
+    password: d.password || ''
+  });
+}
+
+// ============================================================
+// DELETE
+// ============================================================
+function deleteRow(btn) {
+  var row = btn.closest('tr');
+  var sheetRowIndex = row.getAttribute('data-sheet-row');
+  var d = JSON.parse(row.getAttribute('data-row') || '{}');
+
+  Swal.fire({
+    title: 'ยืนยันการลบ?',
+    html: 'ผู้ใช้ <b>' + escHtml(d.name || '') + '</b> จะถูกลบออกจากระบบ',
+    icon:'warning', showCancelButton:true,
+    confirmButtonColor:'#c62828', cancelButtonColor:'#90a4ae',
+    confirmButtonText:'<i class="fa fa-trash-can"></i> ลบเลย',
+    cancelButtonText:'ยกเลิก', reverseButtons:true
+  }).then(function(result){
+    if (!result.isConfirmed) return;
+    Swal.fire({ title:'กำลังลบ...', allowOutsideClick:false, didOpen:function(){ Swal.showLoading(); } });
+
+    fetch(GAS_URL + '?action=deleteAdminUser&rowIndex=' + encodeURIComponent(sheetRowIndex))
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if (!data.ok) {
+          Swal.fire({ icon:'error', title:'ลบไม่สำเร็จ', text: data.message, confirmButtonColor:'#E53935' });
+          return;
+        }
+        row.style.transition = 'opacity 0.25s, transform 0.25s';
+        row.style.opacity = '0'; row.style.transform = 'translateX(30px)';
+        setTimeout(function(){ row.remove(); renumberRows(); updateTotal(); }, 260);
+        Swal.fire({ icon:'success', title:'ลบสำเร็จ!', toast:true, position:'top-end', showConfirmButton:false, timer:2000, timerProgressBar:true });
+      })
+      .catch(function(err){
+        Swal.fire({ icon:'error', title:'เชื่อมต่อไม่ได้', text: err.message, confirmButtonColor:'#E53935' });
+      });
+  });
+}
+
+// ============================================================
+// LOAD
+// ============================================================
+function loadUsers() {
+  var tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:50px;color:#90a4ae;"><i class="fa fa-spinner fa-spin" style="font-size:24px;color:#E53935;display:block;margin-bottom:12px;"></i><span style="font-size:13px;">กำลังโหลดข้อมูล...</span></td></tr>';
+  document.getElementById('totalLabel').textContent = 'กำลังโหลด...';
+
+  fetch(GAS_URL + '?action=getAdminUsers')
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      tbody.innerHTML = '';
+      if (!data.ok) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#c62828;font-size:13px;"><i class="fa fa-triangle-exclamation" style="display:block;font-size:24px;margin-bottom:10px;"></i>' + escHtml(data.message || 'โหลดข้อมูลไม่สำเร็จ') + '</td></tr>';
+        document.getElementById('totalLabel').textContent = 'โหลดไม่สำเร็จ';
+        return;
+      }
+      if (!data.rows || data.rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:50px;color:#90a4ae;font-size:13px;"><i class="fa fa-users-slash" style="font-size:30px;display:block;margin-bottom:12px;color:#FFCDD2;"></i>ยังไม่มีผู้ใช้งานในระบบ</td></tr>';
+        document.getElementById('totalLabel').textContent = 'ยังไม่มีผู้ใช้งาน';
+        return;
+      }
+      data.rows.forEach(function(row, idx){
+        appendRow(idx + 1, row);
+      });
+      document.getElementById('totalLabel').textContent = 'ผู้ใช้งานทั้งหมด ' + data.rows.length + ' คน';
+    })
+    .catch(function(err){
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#c62828;font-size:13px;"><i class="fa fa-triangle-exclamation" style="display:block;font-size:24px;margin-bottom:10px;"></i>เชื่อมต่อไม่ได้: ' + escHtml(err.message) + '</td></tr>';
+      document.getElementById('totalLabel').textContent = 'เชื่อมต่อไม่ได้';
+    });
+}
+
+// ============================================================
+// APPEND ROW
+// ============================================================
+function appendRow(num, row) {
+  var tbody = document.getElementById('tableBody');
+  var tr = document.createElement('tr');
+  tr.setAttribute('data-sheet-row', row.rowIndex || '');
+  tr.setAttribute('data-row', JSON.stringify(row));
+  tr.style.animationDelay = (num * 0.04) + 's';
+
+  // Status pill — admin เสมอ (สีแดง)
+  var statusClass = 'status-admin';
+
+  // Avatar initials
+  var nameParts = String(row.name || '').trim().split(' ');
+  var av = nameParts.map(function(w){ return w[0] || ''; }).join('').substring(0,2).toUpperCase() || '??';
+
+  // Format date
+  var dateStr = String(row.date || '').trim();
+
+  tr.innerHTML =
+    '<td><div class="row-num">' + num + '</div></td>' +
+    '<td><div class="avatar-wrap"><div class="avatar">' + escHtml(av) + '</div><span class="avatar-name">' + escHtml(row.name || '') + '</span></div></td>' +
+    '<td><span class="idem-badge">' + escHtml(row.idem || '') + '</span></td>' +
+    '<td><span class="status-pill ' + statusClass + '"><span class="status-dot"></span>' + escHtml(row.status || '') + '</span></td>' +
+    '<td><span class="username-text">' + escHtml(row.username || '') + '</span></td>' +
+    '<td><div class="pw-group"><span class="pw-mask" id="pw_' + num + '">••••••</span>' +
+      '<button class="pw-show" onclick="togglePwCell(this,\'' + escHtml(row.password || '') + '\',\'pw_' + num + '\')" title="แสดงรหัส"><i class="fa fa-eye"></i></button></div></td>' +
+    '<td><span class="date-text">' + escHtml(dateStr) + '</span></td>' +
+    '<td><div class="action-group">' +
+      '<button class="act-btn act-edit" onclick="editRow(this)" title="แก้ไข"><i class="fa fa-user-pen"></i></button>' +
+      '<button class="act-btn act-delete" onclick="deleteRow(this)" title="ลบ"><i class="fa fa-trash-can"></i></button>' +
+    '</div></td>';
+  tbody.appendChild(tr);
+}
+
+function togglePwCell(btn, pw, spanId) {
+  var span = document.getElementById(spanId);
+  if (span.textContent === '••••••') {
+    span.textContent = pw;
+    btn.innerHTML = '<i class="fa fa-eye-slash"></i>';
+  } else {
+    span.textContent = '••••••';
+    btn.innerHTML = '<i class="fa fa-eye"></i>';
+  }
+}
+
+// ============================================================
+// SEARCH / HELPERS
+// ============================================================
+function filterTable(q) {
+  var q2 = q.trim().toLowerCase();
+  var rows = document.querySelectorAll('#tableBody tr');
+  var shown = 0;
+  rows.forEach(function(row){
+    var match = !q2 || row.textContent.toLowerCase().includes(q2);
+    row.style.display = match ? '' : 'none';
+    if (match) shown++;
+  });
+  document.getElementById('noResult').style.display = shown === 0 ? 'block' : 'none';
+}
+
+function renumberRows() {
+  document.querySelectorAll('#tableBody tr').forEach(function(r, i){
+    var num = r.querySelector('.row-num');
+    if (num) num.textContent = i + 1;
+  });
+}
+
+function updateTotal() {
+  var count = document.querySelectorAll('#tableBody tr').length;
+  document.getElementById('totalLabel').textContent = 'ผู้ใช้งานทั้งหมด ' + count + ' คน';
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.addEventListener('DOMContentLoaded', function(){ loadUsers(); });
+</script>
+</body>
+</html>
