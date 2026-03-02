@@ -7,21 +7,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
+    /* ===== CUSTOM FONT ===== */
+    @font-face {
+      font-family: 'SF Thonburi';
+      src: url('./SF thonburi.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+    }
+
     :root {
-      --accent:        #E53935;
-      --accent-dark:   #C62828;
-      --accent-light:  #FFEBEE;
-      --accent-border: #FFCDD2;
-      --bg:            #f8f0f5;
+      --accent:        #6366f1;
+      --accent-dark:   #4f46e5;
+      --accent-light:  #e0e7ff;
+      --accent-border: #c7d2fe;
+      --bg:            #f8fafc;
       --surface:       #ffffff;
-      --surface2:      #FFF5F5;
-      --border:        #f0d6e8;
-      --text:          #1a1a2e;
-      --muted:         #9a7a8a;
+      --surface2:      #f1f5f9;
+      --border:        #e2e8f0;
+      --text:          #1e293b;
+      --muted:         #64748b;
       --green:         #10b981;
-      --danger:        #f43f5e;
+      --danger:        #ef4444;
       --purple:        #a855f7;
       --orange:        #f97316;
+      --blue:          #3b82f6;
+      --cyan:          #06b6d4;
+      --rose:          #f43f5e;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,7 +45,7 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Nunito', sans-serif;
+      font-family: 'SF Thonburi', 'Nunito', sans-serif;
       display: flex;
       flex-direction: column;
       padding: 14px;
@@ -281,7 +292,44 @@
     @media (max-width: 700px) {
       .stats { grid-template-columns: 1fr 1fr; }
     }
+  /* ===== NEW DASHBOARD PANELS ===== */
+    .dashboard-container {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .kpi-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 280px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(99,102,241,0.08);
+      transition: box-shadow 0.3s, transform 0.3s;
+    }
+    .kpi-panel:hover {
+      box-shadow: 0 4px 12px rgba(99,102,241,0.12), 0 8px 24px rgba(99,102,241,0.12);
+      transform: translateY(-1px);
+    }
+    .kpi-header {
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+    .kpi-header i {
+      color: var(--accent);
+      font-size: 16px;
+    }
+    .kpi-chart-container {
+      flex: 1; position: relative; min-height: 0; height: 280px;
+    }
+    .kpi-chart-container canvas {
+      width: 100% !important; height: 100% !important;
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -306,6 +354,30 @@
       <i class="fa fa-table stat-icon"></i>
       <div class="stat-label">แถวในตาราง</div>
       <div class="stat-value" id="statRows">0</div>
+    </div>
+  </div>
+
+    <!-- KPI PANELS (new split view) -->
+  <div class="dashboard-container">
+    <div class="kpi-panel" id="kpi1-panel">
+      <div class="kpi-header"><i class="fa fa-chart-line"></i> KPI 1 - พนักงาน vs ประเภทรถ (15 วัน)</div>
+      <div class="kpi-chart-container">
+        <canvas id="kpi1-chart"></canvas>
+      </div>
+    </div>
+    <div class="kpi-panel" id="kpi2-panel">
+      <div class="kpi-header">
+        <i class="fa fa-tachometer-alt"></i> KPI 2 - สถิติเชิงไมล์
+      </div>
+      <!-- metric toggle buttons -->
+      <div class="kpi-metric-toggle" style="margin-bottom:8px;">
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 8px;" onclick="window.switchKpi2Metric('maxHour');">ชั่วโมง</button>
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 8px;" onclick="window.switchKpi2Metric('maxAmount');">ราคา</button>
+      </div>
+      <div class="kpi-chart-container">
+        <canvas id="kpi2-chart"></canvas>
+      </div>
+      <div id="kpi2-stats" style="margin-top:10px; font-size:12px; color:var(--muted);"></div>
     </div>
   </div>
 
@@ -387,7 +459,8 @@
   <div class="toast" id="toast"></div>
 
 <script>
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxvFF6f8zzPivoZdHW_kPHPz_cOa24yhfCvvWXOMSQu--SQxsIoD7R20csXjmNt-goU/exec';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxOuFWQG2qJgzLNHKRCeffg4y8KZraiVxL2pCssthl3E7tbSXOQ3b1MhYUqH5766CTK/exec';
+  // const GAS_URL = 'https://script.google.com/macros/s/AKfycbxSqqixTJg6aQ5TVT-nBVRDSheYD23EC-RhMoJL_xlgTedtanTAj1DDLBrlG62MMZfE/exec';
 
   let allData      = [];
   let filteredData = [];
@@ -416,6 +489,9 @@
       }
       showToast('✅ เชื่อมต่อสำเร็จ', 'ok');
       await loadRateMaster();
+      // load KPI charts after master data is in place
+      await loadKpi1();
+      await loadKpi2();
     } catch(e) {
       setStatus('Error', 'err');
       showToast('❌ เชื่อมต่อไม่ได้', 'err');
@@ -437,6 +513,223 @@
     } catch(e) {
       showToast('❌ โหลดข้อมูลไม่สำเร็จ', 'err');
       console.error(e);
+    }
+  }
+
+  async function loadKpi1() {
+    try {
+      const res = await gasGet('getKpi1');
+      console.log('KPI1 API response:', res);
+      if (!res.ok || !res.data || !Array.isArray(res.data)) {
+        console.warn('KPI1 invalid response:', res);
+        return showToast('❌ KPI1 ข้อมูลไม่ถูกต้อง: ' + (res.message || 'no data'), 'err');
+      }
+      if (res.data.length === 0) {
+        console.log('KPI1 no data points');
+        return showToast('⚠️ KPI1 ยังไม่มีข้อมูล', 'err');
+      }
+      const labels = res.data.map(d=>d.date);
+      const employeeData = res.data.map(d=>d.empCount);
+      const rateData     = res.data.map(d=>d.rateCount);
+      const ctx = document.getElementById('kpi1-chart').getContext('2d');
+      if (window.kpi1Chart) window.kpi1Chart.destroy();
+      window.kpi1Chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Employees',
+              data: employeeData,
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.06)',
+              borderWidth: 2.5,
+              tension: 0.4,
+              fill: true,
+              pointRadius: 4,
+              pointBackgroundColor: '#6366f1',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              pointHoverRadius: 6
+            },
+            {
+              label: 'Rate entries',
+              data: rateData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.06)',
+              borderWidth: 2.5,
+              tension: 0.4,
+              fill: true,
+              pointRadius: 4,
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              pointHoverRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                font: { size: 12, weight: 600 },
+                color: '#64748b',
+                padding: 6,
+                usePointStyle: true
+              }
+            },
+            filler: {
+              propagate: true
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                font: { size: 11 },
+                color: '#9ca3af',
+                padding: 8
+              }
+            },
+            x: {
+              grid: { display: false, drawBorder: false },
+              ticks: {
+                font: { size: 11 },
+                color: '#9ca3af',
+                padding: 8
+              }
+            }
+          }
+        }
+      });
+    } catch (e) {
+      console.error('KPI1 load error', e);
+      showToast('❌ KPI1 error: ' + e.message, 'err');
+    }
+  }
+
+  async function loadKpi2() {
+    try {
+      const res = await gasGet('getKpi2');
+      // log full json string to avoid lazy expansion issues
+      console.log('KPI2 API response:', JSON.stringify(res));
+      if (!res || !res.ok || !res.days || !Array.isArray(res.days)) {
+        console.warn('KPI2 invalid response:', res);
+        return showToast('❌ KPI2 ข้อมูลไม่ถูกต้อง: ' + (res && res.message ? res.message : 'no data'), 'err');
+      }
+      if (res.days.length === 0) {
+        console.log('KPI2 no data points');
+        return showToast('⚠️ KPI2 ยังไม่มีข้อมูล', 'err');
+      }
+      const labels = res.days.map(d=>d.date || '');
+      // default metric is hours, can be changed to 'amount'
+      let metric = 'maxHour';
+      const makeDatasets = () => {
+        const dayData   = res.days.map(d=> (d.day && d.day[metric]) ? d.day[metric] : 0);
+        const nightData = res.days.map(d=> (d.night && d.night[metric]) ? d.night[metric] : 0);
+        return [
+          {
+            label: 'Day',
+            data: dayData,
+            backgroundColor: '#6366f1',
+            stack: 'shift'
+          },
+          {
+            label: 'Night',
+            data: nightData,
+            backgroundColor: '#10b981',
+            stack: 'shift'
+          }
+        ];
+      };
+
+      const ctx = document.getElementById('kpi2-chart').getContext('2d');
+      if (window.kpi2Chart) window.kpi2Chart.destroy();
+      window.kpi2Chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: makeDatasets()
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                font: { size: 12, weight: 600 },
+                color: '#64748b',
+                padding: 12,
+                usePointStyle: true
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              stacked: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                font: { size: 11 },
+                color: '#9ca3af',
+                padding: 8
+              }
+            },
+            x: {
+              stacked: true,
+              grid: { display: false, drawBorder: false },
+              ticks: {
+                font: { size: 11 },
+                color: '#9ca3af',
+                padding: 8
+              }
+            }
+          }
+        }
+      });
+
+      const statsDiv = document.getElementById('kpi2-stats');
+      if (statsDiv && res.summary) {
+        const max   = metric === 'maxHour' ? res.summary.overallMaxHour : res.summary.overallMaxAmount;
+        const min   = metric === 'maxHour' ? res.summary.overallMinHour : res.summary.overallMinAmount;
+        const unit  = metric === 'maxHour' ? 'hr' : '$';
+        statsDiv.innerHTML = `<span style="color:#6366f1;font-weight:700">📈 Max:</span> ${max} ${unit} &nbsp;|&nbsp; <span style="color:#10b981;font-weight:700">📉 Min:</span> ${min} ${unit}`;
+      }
+
+      // expose function to switch metric
+      window.switchKpi2Metric = function(newMetric) {
+        if (newMetric !== 'maxHour' && newMetric !== 'maxAmount') return;
+        metric = newMetric;
+        if (window.kpi2Chart) {
+          window.kpi2Chart.data.datasets = makeDatasets();
+          window.kpi2Chart.update();
+        }
+        // update stats text
+        if (statsDiv && res.summary) {
+          const max   = metric === 'maxHour' ? res.summary.overallMaxHour : res.summary.overallMaxAmount;
+          const min   = metric === 'maxHour' ? res.summary.overallMinHour : res.summary.overallMinAmount;
+          const unit  = metric === 'maxHour' ? 'hr' : '$';
+          statsDiv.innerHTML = `<span style="color:#6366f1;font-weight:700">📈 Max:</span> ${max} ${unit} &nbsp;|&nbsp; <span style="color:#10b981;font-weight:700">📉 Min:</span> ${min} ${unit}`;
+        }
+      };
+
+      // optional: expose toggle UI if desired
+    } catch (e) {
+      console.error('KPI2 load error', e);
+      showToast('❌ KPI2 error: ' + e.message, 'err');
     }
   }
 
