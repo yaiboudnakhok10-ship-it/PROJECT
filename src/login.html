@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบบบันทึกไมล์รถ — ThaiDrill Lao</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --accent:      #E53935;
+      --accent-dark: #C62828;
+      --accent-light:#FFEBEE;
+      --accent-glow: rgba(229,57,53,0.25);
+      --bg:          #f5f6fa;
+      --white:       #ffffff;
+      --text-main:   #1a1a2e;
+      --text-muted:  #888;
+      --border:      #e8e8e8;
+    }
+
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .bg-hazard {
+      position: fixed; inset: 0; z-index: 0;
+      background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 60px,
+        rgba(245,197,24,0.06) 60px,
+        rgba(245,197,24,0.06) 120px
+      );
+    }
+
+    .bg-circle-1 {
+      position: fixed; border-radius: 50%; z-index: 0; pointer-events: none;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(229,57,53,0.12) 0%, transparent 65%);
+      top: -300px; right: -200px;
+    }
+    .bg-circle-2 {
+      position: fixed; border-radius: 50%; z-index: 0; pointer-events: none;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(229,57,53,0.08) 0%, transparent 65%);
+      bottom: -200px; left: -100px;
+    }
+
+    .layout {
+      position: relative; z-index: 1;
+      display: flex;
+      width: 100%; max-width: 1020px;
+      margin: auto;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 60px;
+    }
+
+    .brand-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      animation: slideInLeft 0.8s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .brand-logo {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 44px;
+    }
+    .brand-logo-icon {
+      width: 54px; height: 54px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px; font-weight: 900; color: var(--text-main);
+      box-shadow: 4px 4px 0 var(--accent-dark), 0 8px 24px var(--accent-glow);
+    }
+    .brand-logo-text h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px; font-weight: 800;
+      color: #E53935;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .brand-logo-text span {
+      font-size: 11px; color: #E53935;
+      display: block; margin-top: 2px;
+    }
+
+    .brand-headline {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 68px; font-weight: 900;
+      color: var(--text-main); line-height: 0.92;
+      margin-bottom: 22px;
+      text-transform: uppercase;
+    }
+    .brand-headline .hl {
+      color: var(--accent-dark);
+      display: block;
+    }
+    .brand-headline .sm {
+      font-size: 28px; display: block;
+      color: var(--text-muted); font-weight: 600;
+      letter-spacing: 5px; margin-bottom: 6px;
+    }
+
+    .brand-sub {
+      font-size: 14px; color: var(--text-muted);
+      line-height: 1.9; max-width: 300px;
+      border-left: 4px solid var(--accent);
+      padding-left: 16px;
+      margin-bottom: 44px;
+    }
+
+    .brand-info {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .info-item {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 14px; color: var(--text-muted); font-weight: 500;
+    }
+    .info-item i {
+      width: 32px; height: 32px;
+      background: var(--accent-light);
+      border: 1.5px solid var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent-dark); font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .login-card {
+      width: 420px; min-width: 380px;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 0;
+      box-shadow:
+        0 4px 6px rgba(0,0,0,0.04),
+        0 20px 60px rgba(0,0,0,0.10),
+        6px 6px 0 var(--accent);
+      animation: slideInRight 0.8s cubic-bezier(0.22,1,0.36,1) both;
+      animation-delay: 0.15s;
+      overflow: hidden;
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(40px) scale(0.97); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    .card-hazard {
+      height: 10px;
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--accent),
+        var(--accent) 10px,
+        var(--text-main) 10px,
+        var(--text-main) 20px
+      );
+    }
+
+    .card-inner { padding: 38px 40px 44px; }
+
+    .card-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--accent-light);
+      border: 1.5px solid var(--accent);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 11px; font-weight: 700;
+      color: var(--accent-dark);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .card-badge i { font-size: 10px; }
+
+    .card-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 32px; font-weight: 900;
+      color: var(--text-main); margin-bottom: 4px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .card-sub {
+      font-size: 13px; color: var(--text-muted);
+      margin-bottom: 30px; line-height: 1.6;
+    }
+
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11px; font-weight: 700;
+      color: #555; margin-bottom: 8px;
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .field label i { color: var(--accent-dark); font-size: 10px; }
+
+    .input-wrap { position: relative; }
+    .form-input {
+      width: 100%;
+      padding: 13px 44px 13px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px; color: var(--text-main);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600; letter-spacing: 1px;
+      background: var(--bg);
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      outline: none;
+    }
+    .form-input::placeholder {
+      color: #bbb; font-weight: 400;
+      font-family: 'Sarabun', sans-serif; font-size: 13px;
+      letter-spacing: 0px;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(229,57,53,0.18);
+      background: var(--white);
+    }
+
+    .toggle-eye {
+      position: absolute; right: 13px; top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer; color: #bbb; font-size: 14px;
+      transition: color 0.2s; padding: 4px;
+    }
+    .toggle-eye:hover { color: var(--accent-dark); }
+
+    .remember-row {
+      display: flex; align-items: center; gap: 9px;
+      margin-bottom: 24px; margin-top: -4px;
+    }
+    .remember-row input[type="checkbox"] {
+      width: 15px; height: 15px;
+      accent-color: var(--accent-dark); cursor: pointer;
+    }
+    .remember-row label {
+      font-size: 13px; color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .login-btn {
+      width: 100%; padding: 15px;
+      background: var(--accent);
+      color: var(--text-main); border: none;
+      border-radius: 10px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 17px; font-weight: 900;
+      letter-spacing: 3px; text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 var(--accent-dark);
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .login-btn:hover:not(:disabled) {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--accent-dark);
+    }
+    .login-btn:active:not(:disabled) {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 var(--accent-dark);
+    }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(0,0,0,0.25);
+      border-top-color: var(--text-main);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .login-btn.loading .spinner { display: block; }
+    .login-btn.loading .btn-text { opacity: 0.5; }
+    .login-btn.loading .btn-icon { display: none; }
+
+    .card-footer {
+      margin-top: 20px;
+      display: flex; align-items: center; gap: 8px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+    .card-footer i { color: var(--accent-dark); font-size: 12px; }
+    .card-footer span { font-size: 11.5px; color: var(--text-muted); }
+
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; padding: 20px 16px; gap: 0; justify-content: center; }
+      .brand-panel { display: none; }
+      .login-card { width: 100%; min-width: unset; box-shadow: 0 4px 24px rgba(0,0,0,0.10), 4px 4px 0 var(--accent); }
+      .card-inner { padding: 28px 24px 32px; }
+      .card-title { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-hazard"></div>
+  <div class="bg-circle-1"></div>
+  <div class="bg-circle-2"></div>
+
+  <div class="layout">
+
+    <div class="brand-panel">
+      <div class="brand-logo">
+        <div class="brand-logo-icon">TD</div>
+        <div class="brand-logo-text">
+          <h1>ThaiDrill Lao</h1>
+          <span>ບໍລິສັດໄທດິວຈຳກັດຜູ້ດຽວ</span>
+        </div>
+      </div>
+
+      <div class="brand-headline">
+        <span class="sm">ระบบ</span>
+        <span class="hl">บันทึก</span>
+        ไมล์รถ
+      </div>
+
+      <p class="brand-sub">
+        ระบบบันทึกและติดตามการใช้งานรถหนัก<br>
+        ในโครงการ Thaidrill Lao<br>
+      </p>
+
+      <div class="brand-info">
+        <div class="info-item">
+          <i class="fa fa-building"></i>
+          <span>พัฒนา</span>
+        </div>
+        <div class="info-item">
+          <i class="fa fa-users"></i>
+          <span>ทีม DMIS</span>
+        </div>
+        <div class="info-item">
+          <i class="fa fa-envelope"></i>
+          <span>ThaidrillLao.com</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-card">
+      <div class="card-hazard"></div>
+      <div class="card-inner">
+
+        <div class="card-badge">
+          <i class="fa fa-lock"></i>
+          SECURE ACCESS
+        </div>
+
+        <div class="card-title">เข้าสู่ระบบ</div>
+        <div class="card-sub">กรอกข้อมูลเพื่อเข้าใช้งานระบบบันทึกไมล์รถ</div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)" autocomplete="off" novalidate>
+
+          <div class="field">
+            <label><i class="fa fa-id-badge"></i> รหัสผู้ใช้งาน</label>
+            <div class="input-wrap">
+              <input type="text" id="username" class="form-input"
+                placeholder="กรอก Username" autocomplete="username" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <label><i class="fa fa-key"></i> รหัสผ่าน</label>
+            <div class="input-wrap">
+              <input type="password" id="password" class="form-input"
+                placeholder="กรอก Password" autocomplete="current-password" required>
+              <span class="toggle-eye" onclick="togglePass()">
+                <i class="fa fa-eye" id="eyeIcon"></i>
+              </span>
+            </div>
+          </div>
+
+          <div class="remember-row">
+            <input type="checkbox" id="remember" name="remember">
+            <label for="remember">จดจำฉันไว้ในระบบ</label>
+          </div>
+
+          <button type="submit" class="login-btn" id="loginBtn">
+            <div class="spinner"></div>
+            <i class="fa fa-right-to-bracket btn-icon"></i>
+            <span class="btn-text">เข้าสู่ระบบ</span>
+          </button>
+
+        </form>
+
+        <div class="card-footer">
+          <i class="fa fa-shield-halved"></i>
+          <span>ข้อมูลของคุณได้รับการปกป้องอย่างปลอดภัย</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    var GAS_URL  = 'https://script.google.com/macros/s/AKfycbx9Byx5WDJAGUz3G3Jr_-BOKusFVJoFDqEytyBCYc7RnA_L6vQntIgU6JMPYYzR1JD1/exec';
+    var HOME_PAGE = 'index.html';
+
+    // ถ้า login อยู่แล้ว → ไปหน้าหลักเลย ไม่ต้อง login ซ้ำ
+    (function() {
+      try {
+        var raw = localStorage.getItem('td_session');
+        if (raw) {
+          var s = JSON.parse(raw);
+          var valid = s && (s.sessionId || s.username);
+          var notExpired = !s.expires || Date.now() <= s.expires;
+          if (valid && notExpired) {
+            window.location.replace(HOME_PAGE);
+          }
+        }
+      } catch(e) {}
+    })();
+
+    function togglePass() {
+      var input = document.getElementById('password');
+      var icon  = document.getElementById('eyeIcon');
+      input.type = input.type === 'password' ? 'text' : 'password';
+      icon.className = input.type === 'password' ? 'fa fa-eye' : 'fa fa-eye-slash';
+    }
+
+    document.getElementById('username').addEventListener('input', function() {
+      var pos = this.selectionStart;
+      this.value = this.value.toUpperCase();
+      this.setSelectionRange(pos, pos);
+    });
+
+    (function() {
+      try {
+        var saved = localStorage.getItem('td_remembered_user');
+        if (saved) {
+          document.getElementById('username').value = saved;
+          document.getElementById('remember').checked = true;
+        }
+      } catch(e) {}
+    })();
+
+    function handleLogin(event) {
+      event.preventDefault();
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value.trim();
+      var remember = document.getElementById('remember').checked;
+      var btn      = document.getElementById('loginBtn');
+
+      if (!username || !password) {
+        Swal.fire({ icon: 'warning', title: 'กรุณากรอกข้อมูล', text: 'ต้องกรอก Username และ Password ให้ครบ', confirmButtonColor: '#E53935' });
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('loading');
+
+      var url = GAS_URL + '?action=login&username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password);
+
+      fetch(url, { redirect: 'follow' })
+        .then(function(res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function(result) {
+          btn.disabled = false;
+          btn.classList.remove('loading');
+
+          if (result.success) {
+            try {
+              if (remember) localStorage.setItem('td_remembered_user', username);
+              else localStorage.removeItem('td_remembered_user');
+
+              // ✅ บันทึก session พร้อม expires (8 ชั่วโมง)
+              localStorage.setItem('td_session', JSON.stringify({
+                sessionId:  result.sessionId  || ('local_' + Date.now()),
+                username:   result.username   || username,
+                fullname:   result.fullname   || '',
+                status:     result.status     || '',
+                employeeId: result.employeeId || '',
+                loginTime:  new Date().toISOString(),
+                expires:    Date.now() + (7 * 24 * 60 * 60 * 1000)  // ✅ หมดอายุใน 7 วัน
+              }));
+            } catch(e) {}
+
+            showSuccessPopup(result.fullname || username, function() {
+              window.top.location.href = result.redirectUrl || (HOME_PAGE + (result.sessionId ? '?session=' + result.sessionId : ''));
+            });
+
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'เข้าสู่ระบบไม่สำเร็จ',
+              text: result.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+              confirmButtonColor: '#E53935'
+            });
+          }
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.classList.remove('loading');
+          Swal.fire({
+            icon: 'error',
+            title: 'เชื่อมต่อไม่ได้',
+            html: 'ไม่สามารถเชื่อมต่อ GAS ได้<br><small style="color:#999">' + err.message + '</small>',
+            confirmButtonColor: '#E53935',
+            footer: '<small>ตรวจสอบว่า GAS_URL ถูกต้อง และ Deploy แบบ "Anyone" แล้ว</small>'
+          });
+        });
+    }
+  </script>
+
+  <!-- ===== SUCCESS POPUP ===== -->
+  <style>
+    #successOverlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    #successOverlay.show { display: flex; }
+
+    .success-box {
+      position: relative;
+      background: #fff;
+      border-radius: 20px;
+      padding: 36px 40px 32px;
+      width: 260px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes popIn {
+      from { opacity:0; transform: scale(0.7); }
+      to   { opacity:1; transform: scale(1); }
+    }
+
+    /* เส้นวนรอบขอบ */
+    .success-ring {
+      position: absolute;
+      inset: -4px;
+      border-radius: 24px;
+      background: conic-gradient(#E53935 0%, #E53935 var(--p,0%), #e5e7eb var(--p,0%));
+      -webkit-mask: 
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      padding: 4px;
+      transition: none;
+    }
+
+    .success-icon {
+      width: 64px; height: 64px;
+      background: #f0fdf4;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 30px;
+      animation: iconPop 0.4s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes iconPop {
+      from { opacity:0; transform: scale(0.4); }
+      to   { opacity:1; transform: scale(1); }
+    }
+
+    .success-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px; font-weight: 900;
+      color: #1a1a2e; margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    .success-sub {
+      font-size: 13px; color: #888;
+    }
+    .success-sub b { color: #E53935; }
+  </style>
+
+  <div id="successOverlay">
+    <div class="success-box">
+      <div class="success-ring" id="successRing"></div>
+      <div class="success-icon">✅</div>
+      <div class="success-title">เข้าสู่ระบบสำเร็จ!</div>
+      <div class="success-sub">ยินดีต้อนรับ <b id="successName"></b></div>
+    </div>
+  </div>
+
+  <script>
+    function showSuccessPopup(name, callback) {
+      document.getElementById('successName').textContent = name || '';
+      var overlay = document.getElementById('successOverlay');
+      var ring    = document.getElementById('successRing');
+      overlay.classList.add('show');
+
+      // วนเส้นรอบขอบ 0→100% ใน 1.4 วิ
+      var start = null;
+      var duration = 1400;
+      function animRing(ts) {
+        if (!start) start = ts;
+        var progress = Math.min((ts - start) / duration, 1);
+        var pct = Math.round(progress * 100);
+        ring.style.setProperty('--p', pct + '%');
+        if (progress < 1) {
+          requestAnimationFrame(animRing);
+        } else {
+          // เส้นวนครบ → redirect
+          setTimeout(function() {
+            overlay.classList.remove('show');
+            if (callback) callback();
+          }, 200);
+        }
+      }
+      requestAnimationFrame(animRing);
+    }
+  </script>
+
+</body>
+</html>
