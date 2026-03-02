@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รายงานข้อมูลในแต่ละวัน — MVDC-HCD-VDC-KXN-VSCS</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; background: #fff; }
+  body { font-family: 'Sarabun', sans-serif; background: #ffffff; color: #2d1414; font-size: 13px; min-height: 100vh; }
+  :root {
+    --red: #e53935; --dark: #b71c1c; --bdr: #f5c6c6;
+    --light: #fff5f5; --sub: #9b6b6b; --green: #2e7d32; --blue: #1565c0;
+    --trip: #6a1b9a; --trip-light: #f3e5f5; --trip-bdr: #ce93d8;
+  }
+  .topbar {
+    background: #fff; border: 1.5px solid var(--bdr); border-radius: 10px;
+    padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin: 12px 16px 0;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06); position: sticky; top: 8px; z-index: 100;
+    width: calc(100% - 32px);
+  }
+  .topbar-title { font-size: 16px; font-weight: 700; color: #111; white-space: nowrap; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .lbl { font-size: 12px; color: var(--sub); font-weight: 500; white-space: nowrap; }
+  input[type=date], .search-box {
+    border: 1px solid var(--bdr); border-radius: 6px; padding: 5px 10px;
+    font-family: 'Sarabun', sans-serif; font-size: 12px; outline: none;
+    transition: border .2s; color: #2d1414;
+  }
+  input[type=date] { width: 132px; }
+  .search-box { width: 180px; }
+  input[type=date]:focus, .search-box:focus { border-color: var(--red); }
+  .btn {
+    border: none; border-radius: 6px; padding: 6px 13px;
+    font-family: 'Sarabun', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    transition: all .2s; white-space: nowrap;
+  }
+  .btn-red   { background: var(--red); color: #fff; box-shadow: 0 2px 6px rgba(229,57,53,.3); }
+  .btn-red:hover   { background: var(--dark); }
+  .btn-green { background: #1b5e20; color: #fff; box-shadow: 0 2px 6px rgba(27,94,32,.3); }
+  .btn-green:hover { background: #154a18; }
+  .btn-gray  { background: #f5f5f5; color: #555; border: 1px solid #e0e0e0; }
+  .btn-gray:hover  { background: #ffebee; border-color: var(--bdr); color: var(--red); }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+  .main { padding: 14px 16px 28px; }
+  .summary-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chip {
+    background: #fff; border: 1px solid var(--bdr); border-radius: 8px;
+    padding: 6px 14px; font-size: 12px; display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .chip .lbl2 { color: var(--sub); font-weight: 500; }
+  .chip .val  { font-weight: 700; color: var(--dark); }
+  .zones-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+  .zone-card {
+    background: #fff; border-radius: 10px; border: 1px solid var(--bdr);
+    box-shadow: 0 2px 12px rgba(229,57,53,.08); overflow: hidden;
+  }
+  .zone-header {
+    background: linear-gradient(90deg,#fde8e8 0%,#fff5f5 100%);
+    padding: 7px 12px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--bdr);
+  }
+  .zone-header-left { display: flex; flex-direction: column; gap: 1px; }
+  .zone-name { font-size: 13px; font-weight: 700; color: var(--blue); }
+  .zone-type { font-size: 11px; color: var(--sub); font-weight: 500; }
+  .zone-date { font-size: 12px; color: var(--sub); font-weight: 500; }
+  .shifts-wrap { display: grid; grid-template-columns: 1fr 1fr; }
+  .shift-blk { border-right: 1px solid var(--bdr); padding: 8px 8px 6px; }
+  .shift-blk:last-child { border-right: none; }
+  .shift-tag {
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;
+    display: inline-flex; align-items: center; gap: 4px; margin-bottom: 5px;
+  }
+  .tag-day   { background: #fff3e0; color: #e64a19; }
+  .tag-night { background: #fde8e8; color: var(--dark); }
+  .scroll-wrap {
+    max-height: 220px; overflow-y: auto;
+    border: 1px solid var(--bdr); border-radius: 6px; margin-bottom: 4px;
+  }
+  .scroll-wrap::-webkit-scrollbar { width: 5px; }
+  .scroll-wrap::-webkit-scrollbar-track { background: #fff5f5; border-radius: 10px; }
+  .scroll-wrap::-webkit-scrollbar-thumb { background: #ffcdd2; border-radius: 10px; }
+  .scroll-wrap::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+  table.st { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+  table.st.no-trip colgroup col:nth-child(1) { width: 24%; }
+  table.st.no-trip colgroup col:nth-child(2) { width: 24%; }
+  table.st.no-trip colgroup col:nth-child(3) { width: 32%; }
+  table.st.no-trip colgroup col:nth-child(4) { width: 20%; }
+  table.st.has-trip colgroup col:nth-child(1) { width: 19%; }
+  table.st.has-trip colgroup col:nth-child(2) { width: 18%; }
+  table.st.has-trip colgroup col:nth-child(3) { width: 25%; }
+  table.st.has-trip colgroup col:nth-child(4) { width: 20%; }
+  table.st.has-trip colgroup col:nth-child(5) { width: 18%; }
+
+  table.st th {
+    background: #fde8e8; color: #111; font-weight: 600; padding: 4px 5px;
+    text-align: center; border: 1px solid var(--bdr); white-space: nowrap;
+    position: sticky; top: 0; z-index: 2;
+  }
+  table.st.has-trip th.th-trip { background: var(--trip-light); color: var(--trip); }
+  table.st td { padding: 3px 5px; border: 1px solid #f0e0e0; text-align: center; color: #2d1414; }
+  table.st tr:nth-child(even) td { background: #fff8f8; }
+  table.st tr:hover td { background: #fde8e8; }
+  td.tc { font-weight: 600; color: #4a5568; text-align: left; padding-left: 6px; }
+  td.tr { text-align: right; padding-right: 6px; }
+  td.tl { font-size: 10px; color: var(--sub); text-align: left; }
+  td.td-trip { color: var(--trip); font-weight: 700; }
+  .row-tot td {
+    background: #e3f2fd !important; font-weight: 700;
+    color: var(--blue); border-top: 2px solid #90caf9;
+  }
+  .row-tot td.td-trip { color: var(--trip); }
+  .row-triphr td {
+    background: var(--trip-light) !important;
+    border-top: 1px dashed var(--trip-bdr);
+    font-size: 11px;
+  }
+  .no-data-shift { padding: 14px; text-align: center; color: #ccc; font-size: 11px; }
+
+  /* ── FOOTER ── */
+  .card-footer {
+    padding: 8px 12px 10px; border-top: 1.5px solid var(--bdr);
+    background: linear-gradient(90deg,#fff8f8 0%,#f9f9ff 100%);
+    display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+  }
+  .footer-col {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; padding: 4px 10px;
+  }
+  .footer-col + .footer-col {
+    border-left: 1px solid var(--bdr);
+  }
+  .footer-col-label {
+    font-size: 10px; color: var(--sub); font-weight: 500; margin-bottom: 2px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .footer-col-value {
+    font-size: 13px; font-weight: 700;
+  }
+  .footer-col-value.day-val   { color: #e64a19; }
+  .footer-col-value.night-val { color: var(--dark); }
+  .footer-col-value.total-val { color: var(--green); }
+
+  .state-box {
+    text-align: center; padding: 60px 20px; color: var(--sub);
+    font-size: 14px; grid-column: 1/-1;
+  }
+  .state-box i { font-size: 40px; color: #ffcdd2; display: block; margin-bottom: 14px; }
+  .badge-rem {
+    background: #fff3e0; color: #e64a19; font-size: 9px;
+    border-radius: 3px; padding: 1px 4px; font-weight: 600;
+  }
+  @media (max-width: 900px) { .zones-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    .shifts-wrap { grid-template-columns: 1fr; }
+    .shift-blk { border-right: none; border-bottom: 1px solid var(--bdr); }
+  }
+  @media print {
+    .topbar { position: static; box-shadow: none; border: none !important; margin: 0 !important; width: 100% !important; }
+    .zones-grid { grid-template-columns: repeat(2,1fr); }
+    .zone-card { break-inside: avoid; }
+    .btn, .search-box, input[type=date], .lbl { display: none !important; }
+    .scroll-wrap { max-height: none !important; overflow: visible !important; }
+    .main { padding: 8px !important; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-title">
+    <i class="fa fa-chart-bar" style="color:var(--red);margin-right:7px;"></i>
+    รายงานข้อมูลในแต่ละวัน
+  </div>
+  <div class="topbar-right">
+    <span class="lbl">วันที่เริ่ม</span>
+    <input type="date" id="dateFrom">
+    <span class="lbl">วันที่สิ้นสุด</span>
+    <input type="date" id="dateTo">
+    <button class="btn btn-red" onclick="renderDashboard()">
+      <i class="fa fa-magnifying-glass"></i> ค้นหา
+    </button>
+    <input type="text" class="search-box" id="searchBox" placeholder="ค้นหา Contractor / Type...">
+    <button class="btn btn-gray" onclick="loadData()">
+      <i class="fa fa-rotate-right"></i> รีโหลด
+    </button>
+    <div class="live-tag active" id="liveTag" onclick="toggleLive()" title="คลิกเพื่อเปิด/ปิด Auto Refresh">
+      <span class="live-dot" id="liveDot"></span>
+      <span id="liveTxt">Live</span>
+    </div>
+    <button class="btn btn-red" id="btnPDF" onclick="downloadPDF()">
+      <i class="fa fa-file-pdf"></i> PDF
+    </button>
+    <button class="btn btn-green" id="btnExcel" onclick="downloadExcel()">
+      <i class="fa fa-file-excel"></i> Excel
+    </button>
+  </div>
+</div>
+<div class="main">
+  <div class="summary-bar" id="summaryBar"></div>
+  <div class="zones-grid" id="zonesGrid">
+    <div class="state-box">
+      <i class="fa fa-spinner fa-spin" style="color:var(--red)"></i>
+      กำลังโหลดข้อมูล...
+    </div>
+  </div>
+</div>
+<script>
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwMO3ToxhnFqjMugTGrbfbOtxERnMzOMKrArMYCpmD6eWFjnkWXQXnoLKgaZgNil1pG/exec';
+var RAW = [];
+
+function isDay(shift) {
+  var s = (shift||'').toLowerCase().trim();
+  return s==='day'||s==='day shift'||s==='d'||s.startsWith('day');
+}
+function fmtDate(d) {
+  if(!d) return '';
+  var p=d.split('-');
+  return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d;
+}
+function fmtNum(n) {
+  if(n===null||n===undefined||n===''||isNaN(n)) return '-';
+  return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtInt(n) {
+  if(n===null||n===undefined||n===''||isNaN(n)||Number(n)===0) return '-';
+  return Number(n).toLocaleString('th-TH');
+}
+function sumF(arr,k) {
+  return arr.reduce(function(s,r){return s+(Number(r[k])||0);},0);
+}
+function calcPhr(amt,qty) { return(!qty||qty===0)?0:amt/qty; }
+function calcTripHr(qty,trip) { 
+  if(!qty || qty === 0) return 0;
+  var result = trip / qty;
+  return Math.ceil(result * 10) / 10;
+}
+function hasTripS(rows) {
+  if(!rows||!rows.length) return false;
+  return rows.some(function(r){
+    var v=Number(r.trip_s);
+    return r.trip_s!==null&&r.trip_s!==undefined&&r.trip_s!==''&&!isNaN(v)&&v>0;
+  });
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showState(icon,msg) {
+  document.getElementById('zonesGrid').innerHTML='<div class="state-box">'+icon+'<br>'+msg+'</div>';
+}
+
+var LIVE_INTERVAL = 5000;
+var liveTimer     = null;
+var liveOn        = true;
+
+function toggleLive() {
+  liveOn = !liveOn;
+  var dot = document.getElementById('liveDot');
+  var tag = document.getElementById('liveTag');
+  var txt = document.getElementById('liveTxt');
+  if (liveOn) {
+    dot.classList.remove('off'); tag.classList.remove('off'); tag.classList.add('active');
+    startLive();
+  } else {
+    dot.classList.add('off'); tag.classList.remove('active'); tag.classList.add('off');
+    txt.textContent = 'Paused';
+    if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  }
+}
+
+function startLive() {
+  if (liveTimer) clearInterval(liveTimer);
+  liveTimer = setInterval(function() {
+    if (liveOn) fetchSilent();
+  }, LIVE_INTERVAL);
+}
+
+function loadData() {
+  showState('<i class="fa fa-spinner fa-spin" style="color:var(--red)"></i>','กำลังโหลดข้อมูล...');
+  fetch(GAS_URL+'?action=getSheetData')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){showState('<i class="fa fa-circle-exclamation"></i>','เกิดข้อผิดพลาด: '+(d.message||'unknown'));return;}
+      if(!d.rows||d.rows.length===0){showState('<i class="fa fa-inbox"></i>','ไม่พบข้อมูลใน Sheet');return;}
+      RAW=d.rows;
+      window._lastSig = d.rows.length + '|' + JSON.stringify(d.rows[d.rows.length-1]);
+      autoDate();
+      renderDashboard();
+    })
+    .catch(function(err){showState('<i class="fa fa-wifi"></i>','โหลดข้อมูลไม่สำเร็จ: '+err.message);});
+}
+
+function fetchSilent() {
+  fetch(GAS_URL+'?action=getSheetData&_t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok||!d.rows||d.rows.length===0) return;
+      var newSig = d.rows.length + '|' + JSON.stringify(d.rows[d.rows.length-1]);
+      if(newSig === window._lastSig) return;
+      window._lastSig = newSig;
+      RAW = d.rows;
+      renderDashboard();
+    })
+    .catch(function(){});
+}
+
+function autoDate() {
+  var dates=RAW.map(function(r){return r.date;})
+    .filter(function(d){return d&&/^\d{4}-\d{2}-\d{2}$/.test(d);}).sort();
+  if(!dates.length) return;
+  var elFrom=document.getElementById('dateFrom');
+  var elTo=document.getElementById('dateTo');
+  if(!elFrom.value) elFrom.value=dates[0];
+  if(!elTo.value)   elTo.value=dates[dates.length-1];
+}
+
+function processData(rows,dateFrom,dateTo,search) {
+  var filtered=rows.filter(function(r){
+    var dateOk=(!dateFrom||r.date>=dateFrom)&&(!dateTo||r.date<=dateTo);
+    var key=((r.contractor||'')+' '+(r.type||'')).toLowerCase();
+    var srchOk=!search||key.includes(search.toLowerCase());
+    return dateOk&&srchOk;
+  });
+  var map={};
+  filtered.forEach(function(r){
+    var key=(r.contractor||'')+'||'+(r.type||'')+'||'+(r.date||'');
+    if(!map[key]) map[key]={contractor:r.contractor||'',type:r.type||'',date:r.date||'',day:[],night:[]};
+    var entry={
+      code:r.code, qty:r.qty, phr:r.phr, amount:r.amount, remark:r.remark,
+      trip_s:(r.trip_s!==undefined&&r.trip_s!==null&&r.trip_s!=='')? Number(r.trip_s):null
+    };
+    if(isDay(r.shift)) map[key].day.push(entry);
+    else               map[key].night.push(entry);
+  });
+  return Object.values(map).sort(function(a,b){
+    if(a.date<b.date) return -1; if(a.date>b.date) return 1;
+    if(a.contractor<b.contractor) return -1; if(a.contractor>b.contractor) return 1;
+    return a.type<b.type?-1:1;
+  });
+}
+
+function renderTable(rows, showTrip) {
+  if(!rows||!rows.length) {
+    return '<div class="no-data-shift"><i class="fa fa-minus-circle" style="margin-right:4px;color:#ffcdd2;"></i>ไม่มีข้อมูล</div>';
+  }
+  var totalQty=sumF(rows,'qty');
+  var totalAmt=sumF(rows,'amount');
+
+  if(!showTrip) {
+    var cg='<colgroup><col><col><col><col></colgroup>';
+    var body=rows.map(function(r){
+      return '<tr>'
+        +'<td class="tc">'+esc(r.code||'-')+'</td>'
+        +'<td>'+fmtNum(r.qty)+'</td>'
+        +'<td class="tr">'+fmtNum(r.amount)+'</td>'
+        +'<td class="tl">'+(r.remark?'<span class="badge-rem">'+esc(r.remark)+'</span>':'')+'</td>'
+        +'</tr>';
+    }).join('');
+    return '<div class="scroll-wrap">'
+      +'<table class="st no-trip">'+cg
+      +'<thead><tr><th>ID</th><th>Quantity<br>(Hour)</th><th>Amount (฿)</th><th>Remark</th></tr></thead>'
+      +'<tbody>'+body+'</tbody></table></div>'
+      +'<table class="st no-trip" style="margin-top:2px;">'+cg
+      +'<tbody><tr class="row-tot">'
+      +'<td class="tc">Total</td><td>'+fmtNum(totalQty)+'</td>'
+      +'<td class="tr">'+fmtNum(totalAmt)+'</td><td></td>'
+      +'</tr></tbody></table>';
+
+  } else {
+    var totalTrip=sumF(rows,'trip_s');
+    var tripHr=calcTripHr(totalQty,totalTrip);
+    var cg5='<colgroup><col><col><col><col><col></colgroup>';
+    var body5=rows.map(function(r){
+      var tv=(r.trip_s!==null&&r.trip_s>0)?fmtInt(r.trip_s):'-';
+      return '<tr>'
+        +'<td class="tc">'+esc(r.code||'-')+'</td>'
+        +'<td>'+fmtNum(r.qty)+'</td>'
+        +'<td class="tr">'+fmtNum(r.amount)+'</td>'
+        +'<td class="td-trip">'+tv+'</td>'
+        +'<td class="tl">'+(r.remark?'<span class="badge-rem">'+esc(r.remark)+'</span>':'')+'</td>'
+        +'</tr>';
+    }).join('');
+    return '<div class="scroll-wrap">'
+      +'<table class="st has-trip">'+cg5
+      +'<thead><tr>'
+      +'<th>ID</th><th>Quantity<br>(Hour)</th><th>Amount (฿)</th>'
+      +'<th class="th-trip">Trip</th>'
+      +'<th>Remark</th>'
+      +'</tr></thead>'
+      +'<tbody>'+body5+'</tbody></table></div>'
+      +'<table class="st has-trip" style="margin-top:2px;">'+cg5
+      +'<tbody>'
+      +'<tr class="row-tot">'
+      +'<td class="tc">Total</td>'
+      +'<td>'+fmtNum(totalQty)+'</td>'
+      +'<td class="tr">'+fmtNum(totalAmt)+'</td>'
+      +'<td class="td-trip">'+fmtInt(totalTrip)+'</td>'
+      +'<td></td>'
+      +'</tr>'
+      +'<tr class="row-triphr">'
+      +'<td colspan="2" style="text-align:right;color:var(--sub);font-size:10px;padding-right:6px;">Trip/Hr</td>'
+      +'<td colspan="3" style="text-align:left;font-weight:700;color:var(--trip);padding-left:8px;">'
+      +fmtNum(tripHr)
+      +'</td>'
+      +'</tr>'
+      +'</tbody></table>';
+  }
+}
+
+// ── RENDER CARD ───────────────────────────────────────────────
+function renderCard(item) {
+  var showTripDay   = hasTripS(item.day);
+  var showTripNight = hasTripS(item.night);
+
+  // คำนวณ Amount ของแต่ละ shift และรวม
+  var dayAmt   = sumF(item.day,   'amount');
+  var nightAmt = sumF(item.night, 'amount');
+  var totalAmt = dayAmt + nightAmt;
+
+  var footerHtml = '<div class="card-footer">'
+    + '<span style="font-size:13px;color:var(--sub);font-weight:500;">Amount รวม: </span>'
+    + '<span style="font-size:15px;font-weight:700;color:var(--green);">' + fmtNum(totalAmt) + '</span>'
+    + '</div>';
+
+  return '<div class="zone-card">'
+    +'<div class="zone-header">'
+    +'<div class="zone-header-left">'
+    +'<span class="zone-name"><i class="fa fa-truck-pickup" style="font-size:11px;margin-right:5px;"></i>'+esc(item.contractor)+'</span>'
+    +'<span class="zone-type"><i class="fa fa-tag" style="font-size:10px;margin-right:3px;color:var(--sub);"></i>'+esc(item.type)+'</span>'
+    +'</div>'
+    +'<span class="zone-date"><i class="fa fa-calendar" style="font-size:10px;margin-right:3px;"></i>'+fmtDate(item.date)+'</span>'
+    +'</div>'
+    +'<div class="shifts-wrap">'
+    +'<div class="shift-blk">'
+    +'<div class="shift-tag tag-day"><i class="fa fa-sun"></i> Day Shift</div>'
+    +renderTable(item.day, showTripDay)
+    +'</div>'
+    +'<div class="shift-blk">'
+    +'<div class="shift-tag tag-night"><i class="fa fa-moon"></i> Night Shift</div>'
+    +renderTable(item.night, showTripNight)
+    +'</div>'
+    +'</div>'
+    +footerHtml
+    +'</div>';
+}
+
+function renderDashboard() {
+  var dateFrom=document.getElementById('dateFrom').value;
+  var dateTo=document.getElementById('dateTo').value;
+  var search=document.getElementById('searchBox').value.trim();
+  var groups=processData(RAW,dateFrom,dateTo,search);
+  var contractors=[];
+  groups.forEach(function(g){if(contractors.indexOf(g.contractor)===-1) contractors.push(g.contractor);});
+  document.getElementById('summaryBar').innerHTML=
+    '<div class="chip"><span class="lbl2">Contractor</span><span class="val">'+contractors.length+'</span></div>';
+  if(!groups.length){showState('<i class="fa fa-inbox"></i>','ไม่พบข้อมูลในช่วงวันที่ที่เลือก');return;}
+  document.getElementById('zonesGrid').innerHTML=groups.map(renderCard).join('');
+}
+
+function downloadPDF() {
+  var btn=document.getElementById('btnPDF');
+  btn.disabled=true; btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> กำลังสร้าง...';
+  document.querySelectorAll('.scroll-wrap').forEach(function(el){el.style.maxHeight='none';el.style.overflow='visible';});
+  html2canvas(document.getElementById('zonesGrid'),{scale:2,useCORS:true,backgroundColor:'#fff',scrollY:0})
+  .then(function(canvas){
+    var jsPDF=window.jspdf.jsPDF;
+    var pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    var pageW=297,pageH=210,mg=8,uw=pageW-mg*2,uh=pageH-mg*2-14;
+    var ratio=canvas.width/uw,totalH=canvas.height/ratio;
+    var df=document.getElementById('dateFrom').value, dt=document.getElementById('dateTo').value;
+    var yOff=0,pg=0;
+    while(yOff<totalH){
+      if(pg>0) pdf.addPage();
+      pdf.setFillColor(229,57,53); pdf.rect(mg,mg,uw,10,'F');
+      pdf.setTextColor(255,255,255); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
+      pdf.text('Daily Report — MVDC-HCD-VDC-KXN-VSCS',mg+3,mg+7);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(9);
+      pdf.text('วันที่: '+df+' ถึง '+dt,pageW-mg-3,mg+7,{align:'right'});
+      var srcY=yOff*ratio, srcH=Math.min(uh*ratio,canvas.height-srcY);
+      var sl=document.createElement('canvas'); sl.width=canvas.width; sl.height=srcH;
+      sl.getContext('2d').drawImage(canvas,0,srcY,canvas.width,srcH,0,0,canvas.width,srcH);
+      pdf.addImage(sl.toDataURL('image/png'),'PNG',mg,mg+12,uw,srcH/ratio);
+      pdf.setTextColor(180,180,180); pdf.setFontSize(8);
+      pdf.text('หน้า '+(pg+1),pageW/2,pageH-4,{align:'center'});
+      yOff+=uh; pg++;
+    }
+    pdf.save('รายงาน_'+df+'_'+dt+'.pdf'); restore();
+  }).catch(function(){restore();});
+  function restore(){
+    document.querySelectorAll('.scroll-wrap').forEach(function(el){el.style.maxHeight='220px';el.style.overflow='auto';});
+    btn.disabled=false; btn.innerHTML='<i class="fa fa-file-pdf"></i> PDF';
+  }
+}
+
+function downloadExcel() {
+  var btn=document.getElementById('btnExcel');
+  btn.disabled=true; btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> กำลังสร้าง...';
+  var df=document.getElementById('dateFrom').value, dt=document.getElementById('dateTo').value;
+  var search=document.getElementById('searchBox').value.trim();
+  var groups=processData(RAW,df,dt,search);
+  var wb=XLSX.utils.book_new(), ws_data=[];
+  ws_data.push(['รายงานข้อมูลในแต่ละวัน — MVDC-HCD-VDC-KXN-VSCS','','','','','','','','','']);
+  ws_data.push(['วันที่: '+df+' ถึง '+dt,'','','','','','','','','']);
+  ws_data.push([]);
+  groups.forEach(function(item,idx){
+    var showTripDay=hasTripS(item.day), showTripNight=hasTripS(item.night);
+    var showTrip=showTripDay||showTripNight;
+    var allRows=item.day.concat(item.night);
+    var allPhr=calcPhr(sumF(allRows,'amount'),sumF(allRows,'qty'));
+    ws_data.push(['กลุ่มที่ '+(idx+1)+': '+item.contractor+' — '+item.type,'','','','','วันที่:',fmtDate(item.date),'','','']);
+    if(showTrip) {
+      ws_data.push(['Day Shift ('+item.day.length+' รายการ)','','','','','Night Shift ('+item.night.length+' รายการ)','','','','']);
+      ws_data.push(['รหัส','จำนวน (ชม.)','ยอดเงิน ($)','Trip','หมายเหตุ','รหัส','จำนวน (ชม.)','ยอดเงิน ($)','Trip','หมายเหตุ']);
+    } else {
+      ws_data.push(['Day Shift ('+item.day.length+' รายการ)','','','','Night Shift ('+item.night.length+' รายการ)','','','','','']);
+      ws_data.push(['รหัส','จำนวน (ชม.)','ยอดเงิน ($)','หมายเหตุ','','รหัส','จำนวน (ชม.)','ยอดเงิน ($)','หมายเหตุ','']);
+    }
+    var mx=Math.max(item.day.length,item.night.length);
+    for(var i=0;i<mx;i++){
+      var d=item.day[i]||{}, n=item.night[i]||{};
+      if(showTrip){
+        ws_data.push([d.code||'',d.qty!=null?d.qty:'',d.amount!=null?d.amount:'',(d.trip_s!=null&&d.trip_s>0)?d.trip_s:'',d.remark||'',
+                      n.code||'',n.qty!=null?n.qty:'',n.amount!=null?n.amount:'',(n.trip_s!=null&&n.trip_s>0)?n.trip_s:'',n.remark||'']);
+      } else {
+        ws_data.push([d.code||'',d.qty!=null?d.qty:'',d.amount!=null?d.amount:'',d.remark||'','',
+                      n.code||'',n.qty!=null?n.qty:'',n.amount!=null?n.amount:'',n.remark||'','']);
+      }
+    }
+    var dQty=sumF(item.day,'qty'), dAmt=sumF(item.day,'amount'), dTrip=sumF(item.day,'trip_s');
+    var nQty=sumF(item.night,'qty'), nAmt=sumF(item.night,'amount'), nTrip=sumF(item.night,'trip_s');
+    var totalAmtRow = dAmt + nAmt;
+    if(showTrip){
+      ws_data.push(['Total',dQty.toFixed(2),dAmt.toFixed(2),showTripDay?dTrip:'','','Total',nQty.toFixed(2),nAmt.toFixed(2),showTripNight?nTrip:'','']);
+      var dTHr=showTripDay?'Day Trip/Hr: '+ (Math.ceil((dTrip/dQty) * 10) / 10).toFixed(1):'';
+      var nTHr=showTripNight?'Night Trip/Hr: '+ (Math.ceil((nTrip/nQty) * 10) / 10).toFixed(1):'';
+      ws_data.push([dTHr,'','','','',nTHr,'','','','']);
+    } else {
+      ws_data.push(['Total',dQty.toFixed(2),dAmt.toFixed(2),'','','Total',nQty.toFixed(2),nAmt.toFixed(2),'','']);
+    }
+    // Footer row: Day Amt | Night Amt | Total Amt
+    ws_data.push(['Day Amount: '+dAmt.toFixed(2),'','Night Amount: '+nAmt.toFixed(2),'','','Amount รวม: '+totalAmtRow.toFixed(2),'','','','']);
+    ws_data.push([]);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(ws_data);
+  ws['!cols']=[{wch:16},{wch:14},{wch:14},{wch:12},{wch:12},{wch:16},{wch:14},{wch:14},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'รายงาน');
+  XLSX.writeFile(wb,'รายงาน_'+df+'_'+dt+'.xlsx');
+  btn.disabled=false; btn.innerHTML='<i class="fa fa-file-excel"></i> Excel';
+}
+
+(function(){
+  var today=new Date().toISOString().substring(0,10);
+  document.getElementById('dateFrom').value=today;
+  document.getElementById('dateTo').value=today;
+  document.getElementById('searchBox').addEventListener('input',renderDashboard);
+  loadData();
+  startLive();
+})();
+</script>
+</body>
+</html>

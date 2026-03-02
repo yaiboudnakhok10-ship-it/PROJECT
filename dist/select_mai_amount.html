@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รายงานข้อมูลใบแต่ละวัน</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+  :root {
+    --border: #dee2e6;
+    --accent: #0ca678;
+    --accent2: #1971c2;
+    --danger: #e03131;
+    --warn: #e8590c;
+    --text: #212529;
+    --text-muted: #868e96;
+    --green: #2f9e44;
+    --surface2: #f1f3f5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #f0f2f5;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    color: var(--text);
+  }
+  body { display: flex; align-items: stretch; padding: 14px; }
+
+  .main-card {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+    border: 1.5px solid #ced4da; border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    overflow: hidden; background: #fff;
+  }
+
+  .topbar {
+    background: #fff; border-bottom: 2px solid var(--border);
+    padding: 9px 16px; display: flex; align-items: center;
+    gap: 10px; flex-wrap: wrap; flex-shrink: 0;
+  }
+  .topbar-title {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px; color: #212529; white-space: nowrap;
+  }
+  .topbar-title svg { width: 16px; height: 16px; color: #e03131; }
+
+  .field-group {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .field-group label { white-space: nowrap; }
+  .field-group input[type="date"] {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 8px; border-radius: 6px;
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+    outline: none; cursor: pointer;
+  }
+
+  .contractor-wrap { position: relative; display: flex; align-items: center; }
+  .contractor-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer;
+    font-size: 11px; font-family: inherit; color: var(--text);
+    white-space: nowrap; min-width: 160px; user-select: none;
+  }
+  .contractor-btn svg { width: 11px; height: 11px; color: var(--text-muted); transition: transform 0.2s; }
+  .contractor-btn .label { flex: 1; }
+  .contractor-wrap.open .contractor-btn svg:last-child { transform: rotate(180deg); }
+  .contractor-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0;
+    min-width: 220px; background: #fff;
+    border: 1.5px solid #ced4da; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.13); z-index: 999; overflow: hidden;
+  }
+  .contractor-wrap.open .contractor-dropdown { display: block; }
+  .dd-search { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .dd-search input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 8px; font-size: 11px;
+    font-family: inherit; color: var(--text); outline: none;
+  }
+  .dd-list { max-height: 200px; overflow-y: auto; padding: 4px 0; }
+  .dd-item {
+    padding: 7px 14px; font-size: 12px; cursor: pointer;
+    color: var(--text); transition: background 0.1s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dd-item:hover { background: #f1f8ff; color: var(--accent2); }
+  .dd-item.selected { background: #e8f4ff; color: var(--accent2); font-weight: 600; }
+  .dd-item .dd-check {
+    width: 14px; height: 14px; border-radius: 3px;
+    border: 1.5px solid #ced4da; display: inline-flex;
+    align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px;
+  }
+  .dd-item.selected .dd-check { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+  .search-box {
+    display: flex; align-items: center;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 8px; gap: 5px;
+    flex: 1; min-width: 130px; max-width: 200px;
+  }
+  .search-box input {
+    background: transparent; border: none; color: var(--text);
+    font-size: 11px; outline: none; width: 100%; font-family: inherit;
+  }
+  .search-box input::placeholder { color: var(--text-muted); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 11px; border-radius: 6px; font-size: 11px;
+    font-weight: 600; cursor: pointer; border: none;
+    transition: filter 0.15s; white-space: nowrap; font-family: inherit;
+  }
+  .btn-primary { background: var(--accent2); color: #fff; }
+  .btn-danger  { background: var(--danger);  color: #fff; }
+  .btn-success { background: var(--green);   color: #fff; }
+  .btn-ghost   { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn:hover   { filter: brightness(1.1); }
+
+
+
+
+
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 20px;
+    border: 1px solid var(--accent); color: var(--accent);
+    font-size: 10px; font-weight: 700;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0.4; transform:scale(0.7); }
+  }
+
+  .table-wrap {
+    flex: 1; min-height: 0;
+    overflow-x: auto; overflow-y: auto;
+    background: #f8f9fa;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1720px; }
+
+  thead tr { background: #e9ecef; }
+  th {
+    padding: 10px 10px; text-align: left;
+    font-weight: 700; font-size: 10.5px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: #1971c2; border-bottom: 2px solid #1971c2;
+    border-right: 1px solid #d0d7de;
+    white-space: nowrap;
+    position: sticky; top: 0; z-index: 10; background: #e9ecef;
+  }
+  th:last-child { border-right: none; }
+  th.th-pic { text-align: center; color: #0ca678; border-bottom-color: #0ca678; }
+  th.th-action { text-align: center; color: #555; border-bottom-color: #adb5bd; }
+
+  tbody tr { transition: background 0.1s; animation: rowIn 0.22s ease both; }
+  @keyframes rowIn {
+    from { opacity:0; transform:translateY(4px); }
+    to   { opacity:1; transform:none; }
+  }
+  tbody tr:nth-child(even) { background: #f1f3f5; }
+  tbody tr:hover            { background: #e4f0ff; }
+
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e9ecef;
+    border-right: 1px solid #e9ecef;
+    color: var(--text); vertical-align: middle; white-space: nowrap;
+  }
+  td:last-child          { border-right: none; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .action-cell { text-align: center; white-space: nowrap; }
+  .btn-edit, .btn-del {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 7px;
+    cursor: pointer; border: none; font-family: inherit;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-edit { background: #e8f4ff; color: var(--accent2); }
+  .btn-edit:hover { background: #cce4ff; transform: scale(1.1); }
+  .btn-del  { background: #fff0f0; color: var(--danger); margin-left: 4px; }
+  .btn-del:hover  { background: #ffd6d6; transform: scale(1.1); }
+
+  .td-datetime { font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.6; }
+  .dt-date { color:var(--accent2); font-weight:600; }
+  .dt-time { color:var(--text-muted); }
+  .td-empcode { font-family:'IBM Plex Mono',monospace; color:var(--warn); font-weight:600; font-size:11px; }
+  .td-smu     { font-family:'IBM Plex Mono',monospace; font-size:11px; color:#495057; }
+  .td-amount  { font-family:'IBM Plex Mono',monospace; color:var(--green); font-weight:700; font-size:12px; }
+  .td-hours   { font-family:'IBM Plex Mono',monospace; color:var(--accent); font-weight:600; font-size:12px; text-align:center; }
+  .td-standby { text-align:center; }
+  .td-remark-cell { color:var(--text-muted); font-size:11px; max-width:130px; overflow:hidden; text-overflow:ellipsis; }
+
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; }
+  .badge-dept  { background:none; color:var(--text); }
+  .badge-shift { background:none; color:var(--text); }
+  .badge-type  { background:none; color:var(--text); }
+
+  .pic-cell { text-align:center; }
+  .pic-thumb {
+    width:34px; height:34px; border-radius:6px; object-fit:cover;
+    border:2px solid var(--border); cursor:pointer;
+    transition:transform 0.2s, border-color 0.2s;
+    display:inline-block; vertical-align:middle;
+  }
+  .pic-thumb:hover { transform:scale(1.15); border-color:var(--accent); }
+  .no-pic {
+    width:34px; height:34px; border-radius:6px;
+    background:var(--surface2); border:2px dashed var(--border);
+    display:inline-flex; align-items:center; justify-content:center;
+    color:var(--text-muted); font-size:15px;
+  }
+  .standby-yes { display:inline-flex; align-items:center; gap:4px; color:var(--accent); font-size:10px; font-weight:600; }
+  .standby-no  { display:inline-flex; align-items:center; gap:4px; color:var(--text-muted); font-size:10px; }
+  .empty-row td { text-align:center; padding:50px; color:var(--text-muted); font-size:14px; border:none; }
+
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:#f1f3f5; }
+  ::-webkit-scrollbar-thumb { background:#ced4da; border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:#adb5bd; }
+
+  /* =============================================
+     RIGHT SLIDE MODAL (FULL EDIT)
+  ============================================= */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 500;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.active { display: block; }
+
+  .modal-panel {
+    position: fixed; top: 0; right: -520px;
+    width: 500px; height: 100%;
+    background: #fff;
+    box-shadow: -8px 0 40px rgba(0,0,0,0.18);
+    z-index: 501; display: flex; flex-direction: column;
+    transition: right 0.32s cubic-bezier(0.4,0,0.2,1);
+    border-left: 2px solid #e9ecef;
+  }
+  .modal-panel.active { right: 0; }
+
+  .modal-header {
+    padding: 18px 20px 14px; border-bottom: 1.5px solid #e9ecef;
+    display: flex; align-items: flex-start; gap: 12px; flex-shrink: 0;
+  }
+  .modal-header-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, #1971c2, #1098ad);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .modal-header-icon svg { width: 20px; height: 20px; color: #fff; }
+  .modal-header-info { flex: 1; }
+  .modal-header-title { font-size: 15px; font-weight: 700; color: #212529; }
+  .modal-header-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--surface2); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); font-size: 16px; flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .modal-close:hover { background: #e9ecef; color: var(--text); }
+
+  .modal-body {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  .info-card {
+    background: #f8f9fa; border-radius: 10px;
+    padding: 12px 14px; border: 1px solid #e9ecef;
+  }
+  .info-card-title {
+    font-size: 10px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
+  }
+  .info-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .info-item label {
+    display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 2px;
+  }
+  .info-item span {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .edit-card {
+    background: #fff; border-radius: 10px;
+    padding: 14px 16px; border: 1.5px solid #1971c2;
+    box-shadow: 0 0 0 3px rgba(25,113,194,0.08);
+  }
+  .edit-card-title {
+    font-size: 10px; font-weight: 700; color: var(--accent2);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .edit-card-title svg { width: 13px; height: 13px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-field { margin-bottom: 10px; }
+  .form-field:last-child { margin-bottom: 0; }
+  .form-field label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--text); margin-bottom: 5px;
+  }
+  .form-field label span {
+    font-size: 10px; color: var(--text-muted); font-weight: 400; margin-left: 4px;
+  }
+  .form-input {
+    width: 100%; border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 7px 10px;
+    font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text);
+    outline: none; background: #fff; transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(25,113,194,0.1); }
+  .form-select {
+    width: 100%; border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 7px 10px;
+    font-size: 12px; font-family: inherit; color: var(--text);
+    outline: none; background: #fff; cursor: pointer;
+    transition: border-color 0.15s; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23868e96' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    padding-right: 30px;
+  }
+  .form-select:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(25,113,194,0.1); }
+
+  .trip-counter {
+    display: flex; align-items: center; gap: 0;
+    border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden;
+    width: fit-content;
+  }
+  .trip-btn {
+    width: 36px; height: 36px; border: none; background: var(--surface2);
+    cursor: pointer; font-size: 18px; font-weight: 700;
+    color: var(--text); display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s; flex-shrink: 0; line-height: 1;
+  }
+  .trip-btn:hover { background: #e9ecef; }
+  .trip-btn.plus:hover { background: #d3f9d8; color: var(--green); }
+  .trip-btn.minus:hover { background: #fff0f0; color: var(--danger); }
+  .trip-input {
+    width: 60px; height: 36px; text-align: center;
+    border: none; border-left: 1.5px solid var(--border);
+    border-right: 1.5px solid var(--border);
+    font-size: 16px; font-weight: 700; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; outline: none; background: #fff;
+  }
+  .trip-input::-webkit-inner-spin-button,
+  .trip-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .remark-input {
+    width: 100%; border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 9px 12px;
+    font-size: 12px; font-family: inherit; color: var(--text);
+    outline: none; resize: vertical; min-height: 70px;
+    transition: border-color 0.15s; background: #fff;
+  }
+  .remark-input:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(25,113,194,0.1); }
+
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .toggle-switch {
+    position: relative; width: 44px; height: 24px; cursor: pointer;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0; background: #dee2e6;
+    border-radius: 24px; transition: background 0.2s;
+  }
+  .toggle-switch input:checked ~ .toggle-track { background: var(--accent); }
+  .toggle-knob {
+    position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; background: #fff;
+    border-radius: 50%; transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked ~ .toggle-track .toggle-knob { transform: translateX(20px); }
+  .toggle-label { font-size: 12px; font-weight: 600; color: var(--text); }
+
+  .modal-footer {
+    padding: 14px 20px; border-top: 1.5px solid #e9ecef;
+    display: flex; gap: 8px; flex-shrink: 0;
+  }
+  .btn-save {
+    flex: 1; padding: 10px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent2), #1098ad);
+    color: #fff; border: none; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: filter 0.15s;
+  }
+  .btn-save:hover { filter: brightness(1.08); }
+  .btn-cancel {
+    padding: 10px 18px; border-radius: 8px;
+    background: var(--surface2); color: var(--text-muted);
+    border: 1.5px solid var(--border); font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background 0.15s;
+  }
+  .btn-cancel:hover { background: #e9ecef; }
+
+  .lightbox {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88); z-index: 800;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  .lightbox.active { display: flex; }
+
+  .lightbox-inner {
+    position: relative; display: inline-block;
+    animation: zoomIn 0.22s ease;
+  }
+  @keyframes zoomIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+
+  .lightbox-img {
+    max-width: 82vw; max-height: 82vh;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.15);
+    display: block;
+  }
+
+  .lightbox-smu-badge {
+    position: absolute; bottom: 14px; left: 14px;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(6px);
+    border-radius: 10px;
+    padding: 8px 16px;
+    display: flex; flex-direction: column; gap: 2px;
+    border: 1.5px solid rgba(255,255,255,0.18);
+    pointer-events: none;
+  }
+  .lb-smu-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .lb-smu-label.start { color: #63e6be; }
+  .lb-smu-label.end   { color: #ffa94d; }
+  .lb-smu-value {
+    font-size: 22px; font-weight: 700; color: #fff;
+    font-family: 'IBM Plex Mono', monospace; line-height: 1;
+  }
+
+  .lightbox-close {
+    position: absolute; top: -44px; right: 0;
+    color: #fff; font-size: 20px; cursor: pointer; opacity: 0.7;
+    background: rgba(255,255,255,0.1); border-radius: 50%;
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.15s, background 0.15s;
+  }
+  .lightbox-close:hover { opacity: 1; background: rgba(220,38,38,0.7); }
+
+  .zoom-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.9); z-index: 1000;
+    align-items: center; justify-content: center; backdrop-filter: blur(8px);
+  }
+  .zoom-overlay.active { display: flex; }
+  .zoom-img {
+    max-width: 88vw; max-height: 88vh; border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.2);
+    box-shadow: 0 0 80px rgba(0,0,0,0.6); cursor: zoom-out;
+  }
+  .zoom-close {
+    position: absolute; top: 16px; right: 20px; color: #fff; font-size: 28px;
+    cursor: pointer; opacity: 0.8; line-height: 1;
+    background: rgba(0,0,0,0.4); border-radius: 50%;
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  }
+  .zoom-close:hover { opacity: 1; background: rgba(220,38,38,0.7); }
+
+  .delete-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 600;
+    align-items: center; justify-content: center; backdrop-filter: blur(3px);
+  }
+  .delete-overlay.active { display: flex; }
+  .delete-box {
+    background: #fff; border-radius: 16px; padding: 28px 28px 24px;
+    width: 320px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes popIn {
+    from { opacity:0; transform:scale(0.8); }
+    to   { opacity:1; transform:scale(1); }
+  }
+  .delete-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #fff0f0; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; font-size: 26px;
+  }
+  .delete-title { font-size: 16px; font-weight: 700; color: #212529; margin-bottom: 6px; }
+  .delete-sub   { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+  .delete-actions { display: flex; gap: 10px; }
+  .btn-confirm-del {
+    flex: 1; padding: 10px; border-radius: 8px;
+    background: var(--danger); color: #fff; border: none;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .btn-confirm-del:hover { background: #c92a2a; }
+  .btn-cancel-del {
+    flex: 1; padding: 10px; border-radius: 8px;
+    background: var(--surface2); color: var(--text-muted);
+    border: 1.5px solid var(--border); font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #212529; color: #fff; padding: 10px 20px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; z-index: 900;
+    transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.success { background: var(--green); }
+  .toast.error   { background: var(--danger); }
+
+  .section-sep {
+    height: 1px; background: #e9ecef; margin: 4px 0 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="main-card">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 12h6M9 16h6M9 8h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+      </svg>
+      รายงานข้อมูลใบแต่ละวัน
+    </div>
+    <div class="field-group">
+      <label>วันที่เริ่ม</label>
+      <input type="date" value="2026-03-02" id="dateFrom">
+    </div>
+    <div class="field-group">
+      <label>วันที่สุด</label>
+      <input type="date" value="2026-03-02" id="dateTo">
+    </div>
+    <button class="btn btn-primary" onclick="filterData()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      ค้นหา
+    </button>
+    <div class="contractor-wrap" id="contractorWrap">
+      <div class="contractor-btn" onclick="toggleDropdown()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        <span class="label" id="contractorLabel">Contractor ทั้งหมด</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="contractor-dropdown" id="contractorDropdown">
+        <div class="dd-search">
+          <input type="text" placeholder="ค้นหา Contractor..." id="ddSearch" oninput="filterDropdown(this.value)">
+        </div>
+        <div class="dd-list" id="ddList"></div>
+      </div>
+    </div>
+    <div class="search-box">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="ค้นหาชื่อ / รหัส..." id="searchInput" oninput="filterData()">
+    </div>
+    <button class="btn btn-ghost" onclick="resetFilter()">รีเซ็ต</button>
+    <div class="live-badge"><span class="live-dot"></span>Live <span id="liveCount" style="margin-left:4px;opacity:0.7"></span></div>
+    <button class="btn btn-ghost" onclick="loadData(true)" title="โหลดข้อมูลใหม่" style="padding:5px 9px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+    </button>
+    <button class="btn btn-danger">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF
+    </button>
+    <button class="btn btn-success">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Excel
+    </button>
+  </div>
+
+
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th class="th-action">จัดการ</th>
+          <th>วันที่ / เวลา</th>
+          <th>Employee Code</th>
+          <th>Name</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Contractor</th>
+          <th>TYPE</th>
+          <th>ID</th>
+          <th>Shift</th>
+          <th>Start SMU</th>
+          <th class="th-pic">Pic Start</th>
+          <th>End SMU</th>
+          <th class="th-pic">Pic End</th>
+          <th>Quantity (Hour)</th>
+          <th>Standby</th>
+          <th>Unit Price</th>
+          <th>Amount ($)</th>
+          <th>Trip</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- RIGHT SLIDE MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+<div class="modal-panel" id="modalPanel">
+  <div class="modal-header">
+    <div class="modal-header-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    </div>
+    <div class="modal-header-info">
+      <div class="modal-header-title" id="modalTitle">แก้ไขข้อมูล</div>
+      <div class="modal-header-sub" id="modalSub">กรุณาตรวจสอบข้อมูลก่อนบันทึก</div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+
+  <div class="modal-body">
+    <div class="info-card">
+      <div class="info-card-title">📋 ข้อมูลพนักงาน (อ่านอย่างเดียว)</div>
+      <div class="info-grid">
+        <div class="info-item"><label>Employee Code</label><span id="vEmpCode">—</span></div>
+        <div class="info-item"><label>ชื่อ</label><span id="vName">—</span></div>
+        <div class="info-item"><label>Department</label><span id="vDept">—</span></div>
+        <div class="info-item"><label>Position</label><span id="vPos">—</span></div>
+        <div class="info-item"><label>วันที่ / เวลา</label><span id="vDatetime">—</span></div>
+      </div>
+    </div>
+
+    <div class="edit-card">
+      <div class="edit-card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        แก้ไขข้อมูลได้
+      </div>
+
+      <div class="form-row">
+        <div class="form-field" style="margin-bottom:0">
+          <label>Contractor</label>
+          <input class="form-input" type="text" id="editContractor" placeholder="ชื่อ Contractor">
+        </div>
+        <div class="form-field" style="margin-bottom:0">
+          <label>TYPE</label>
+          <input class="form-input" type="text" id="editType" placeholder="เช่น OT, Normal">
+        </div>
+      </div>
+      <div class="section-sep"></div>
+
+      <div class="form-row">
+        <div class="form-field" style="margin-bottom:0">
+          <label>ID (WPS ID)</label>
+          <input class="form-input" type="text" id="editWpsId" placeholder="รหัส ID">
+        </div>
+        <div class="form-field" style="margin-bottom:0">
+          <label>Shift</label>
+          <select class="form-select" id="editShift">
+            <option value="">-- เลือก Shift --</option>
+            <option value="Day">Day</option>
+            <option value="Night">Night</option>
+          </select>
+        </div>
+      </div>
+      <div class="section-sep"></div>
+
+      <div class="form-row">
+        <div class="form-field" style="margin-bottom:0">
+          <label>Start SMU</label>
+          <input class="form-input" type="number" id="editStartSMU" placeholder="0">
+        </div>
+        <div class="form-field" style="margin-bottom:0">
+          <label>End SMU</label>
+          <input class="form-input" type="number" id="editEndSMU" placeholder="0">
+        </div>
+      </div>
+      <div class="section-sep"></div>
+
+      <div class="form-row" style="align-items:end">
+        <div class="form-field" style="margin-bottom:0">
+          <label>Quantity (Hour)</label>
+          <input class="form-input" type="number" step="0.1" id="editHours" placeholder="0.0">
+        </div>
+        <div class="form-field" style="margin-bottom:0">
+          <label>Standby <span></span></label>
+          <input class="form-input" type="number" step="0.1" id="editStandby" placeholder="0.0">
+        </div>
+      </div>
+      <div class="section-sep"></div>
+
+      <div class="form-row">
+        <div class="form-field" style="margin-bottom:0">
+          <label>Unit Price ($)</label>
+          <input class="form-input" type="number" step="0.01" id="editUnitPrice" placeholder="0.00">
+        </div>
+        <div class="form-field" style="margin-bottom:0">
+          <label>Amount ($) <span></span></label>
+          <input class="form-input" type="number" step="0.01" id="editAmount" placeholder="0.00" style="background:#f8f9fa">
+        </div>
+      </div>
+      <div class="section-sep"></div>
+
+      <div class="form-field">
+        <label>จำนวน Trip <span></span></label>
+        <div class="trip-counter">
+          <button class="trip-btn minus" onclick="changTrip(-1)">−</button>
+          <input class="trip-input" type="number" id="editTrip" min="0" value="0">
+          <button class="trip-btn plus" onclick="changTrip(1)">+</button>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Remark <span>( บันทึกเพิ่มเติม )</span></label>
+        <textarea class="remark-input" id="editRemark" placeholder="พิมพ์หมายเหตุที่นี่..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+    <button class="btn-save" onclick="saveEdit()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      บันทึกการแก้ไข
+    </button>
+  </div>
+</div>
+
+<!-- ZOOM OVERLAY -->
+<div class="zoom-overlay" id="zoomOverlay" onclick="closeZoom()">
+  <div class="zoom-close" onclick="closeZoom()">✕</div>
+  <img class="zoom-img" id="zoomImg" src="" alt="">
+</div>
+
+<!-- LIGHTBOX WITH SMU OVERLAY -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-inner">
+    <div class="lightbox-close" onclick="closeLightbox()">✕</div>
+    <img class="lightbox-img" id="lightboxImg" src="" alt="">
+    <div class="lightbox-smu-badge" id="lightboxSmubadge">
+      <div class="lb-smu-label" id="lightboxSmuLabel">START SMU</div>
+      <div class="lb-smu-value" id="lightboxSmuValue">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="delete-overlay" id="deleteOverlay">
+  <div class="delete-box">
+    <div class="delete-icon">🗑️</div>
+    <div class="delete-title">ยืนยันการลบข้อมูล?</div>
+    <div class="delete-sub" id="deleteSubText">คุณต้องการลบข้อมูลนี้หรือไม่?<br>การดำเนินการนี้ไม่สามารถย้อนกลับได้</div>
+    <div class="delete-actions">
+      <button class="btn-cancel-del" onclick="cancelDelete()">ยกเลิก</button>
+      <button class="btn-confirm-del" onclick="confirmDelete()">ลบข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== GAS CONFIG ===== */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxyoAQrY3hBKovCZ9LWCDIvN1OleVs4RNGu9gLnZRE8eyy_dKEhGK5xytbZ1UmhgZ9l/exec';
+
+let tableData   = [];
+let displayData = [];
+let selectedContractor = '';
+let editingId   = null;
+let deletingId  = null;
+
+/* =============================================
+   GOOGLE DRIVE URL → DIRECT IMAGE URL
+   รองรับทุก format ที่ GAS ส่งมา
+============================================= */
+function fixImgUrl(url) {
+  if (!url) return null;
+  url = String(url).trim();
+  if (!url || url === 'null' || url === 'undefined' || url === '—') return null;
+
+  // ถ้าเป็น base64 หรือ blob ใช้เลย
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+  // แปลง Google Drive share/view link → thumbnail direct link
+  // format: https://drive.google.com/file/d/FILE_ID/view...
+  let m = url.match(/\/file\/d\/([^\/\?&]+)/);
+  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
+
+  // format: https://drive.google.com/open?id=FILE_ID
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
+
+  // format: https://lh3.googleusercontent.com/... (ใช้เลย)
+  if (url.includes('googleusercontent.com')) return url;
+
+  // format: https://drive.google.com/thumbnail?id=...  (ใช้เลย)
+  if (url.includes('drive.google.com/thumbnail')) return url;
+
+  // URL อื่นๆ ใช้ตรงๆ
+  return url;
+}
+
+/* =============================================
+   SILENT AUTO-POLL — ทุก 10 วินาที เงียบๆ ไม่มี UI
+============================================= */
+let rtPrevCount = 0;
+let rtIsLoading = false;
+
+function startSilentPoll() {
+  setInterval(async () => {
+    if (rtIsLoading) return;
+    await loadData(false); // false = silent
+  }, 10000); // 10 วินาที
+}
+
+/* ===== RENDER TABLE ===== */
+function renderTable(data) {
+  const body = document.getElementById('tableBody');
+  if (!data.length) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="20">ไม่พบข้อมูล</td></tr>`;
+    return;
+  }
+  body.innerHTML = data.map((r, i) => `
+    <tr style="animation-delay:${i*25}ms">
+      <td class="action-cell">
+        <button class="btn-edit" onclick="openEdit(${r.id})" title="แก้ไข">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-del" onclick="openDelete(${r.id})" title="ลบ">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </td>
+      <td class="td-datetime">
+        <div class="dt-date">${r.date}</div>
+        <div class="dt-time">${r.time}</div>
+      </td>
+      <td class="td-empcode">${r.empCode}</td>
+      <td style="font-weight:600">${r.name}</td>
+      <td><span class="badge badge-dept">${r.dept}</span></td>
+      <td style="color:var(--text-muted)">${r.position}</td>
+      <td style="font-size:11px">${r.contractor}</td>
+      <td><span class="badge badge-type">${r.type}</span></td>
+      <td class="td-empcode">${r.wpsId}</td>
+      <td><span class="badge badge-shift">${r.shift}</span></td>
+      <td class="td-smu">${r.startSMU}</td>
+      <td class="pic-cell">${r.picStart
+        ? `<img class="pic-thumb" src="${r.picStart}" onclick="openLightbox('${r.picStart}',${r.id},'start')" onerror="this.parentNode.innerHTML='<div class=\\'no-pic\\'>📷</div>'">`
+        : `<div class="no-pic">📷</div>`}</td>
+      <td class="td-smu">${r.endSMU}</td>
+      <td class="pic-cell">${r.picEnd
+        ? `<img class="pic-thumb" src="${r.picEnd}" onclick="openLightbox('${r.picEnd}',${r.id},'end')" onerror="this.parentNode.innerHTML='<div class=\\'no-pic\\'>📷</div>'">`
+        : `<div class="no-pic">📷</div>`}</td>
+      <td class="td-hours">${r.hours.toFixed(1)}</td>
+      <td class="td-standby">${r.standby && String(r.standby).toLowerCase() !== 'no' && r.standby !== false
+        ? `<span class="standby-yes">✦ ${r.standby === true ? 'Standby' : r.standby}</span>`
+        : `<span class="standby-no">—</span>`}</td>
+      <td class="td-smu">$${r.unitPrice}</td>
+      <td class="td-amount">$${r.amount.toLocaleString()}</td>
+      <td class="td-hours" style="font-weight:700;color:var(--accent2)">${r.trip}</td>
+      <td class="td-remark-cell">${r.remark}</td>
+    </tr>
+  `).join('');
+}
+
+/* ===== EDIT MODAL ===== */
+function openEdit(id) {
+  const r = tableData.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+
+  document.getElementById('vEmpCode').textContent  = r.empCode;
+  document.getElementById('vName').textContent     = r.name;
+  document.getElementById('vDept').textContent     = r.dept;
+  document.getElementById('vPos').textContent      = r.position;
+  document.getElementById('vDatetime').textContent = r.date + ' ' + r.time;
+
+  document.getElementById('editContractor').value = r.contractor;
+  document.getElementById('editType').value        = r.type;
+  document.getElementById('editWpsId').value       = r.wpsId;
+  document.getElementById('editShift').value       = r.shift;
+  document.getElementById('editStartSMU').value    = r.startSMU === '—' ? '' : r.startSMU;
+  document.getElementById('editEndSMU').value      = r.endSMU   === '—' ? '' : r.endSMU;
+  document.getElementById('editHours').value       = r.hours;
+  document.getElementById('editUnitPrice').value   = r.unitPrice;
+  document.getElementById('editAmount').value      = r.amount;
+  document.getElementById('editStandby').value    = r.standby ? 'Yes' : '';
+  document.getElementById('editTrip').value        = r.trip;
+  document.getElementById('editRemark').value      = r.remark;
+
+  document.getElementById('editHours').oninput    = calcAmount;
+  document.getElementById('editUnitPrice').oninput = calcAmount;
+
+  document.getElementById('modalTitle').textContent = 'แก้ไขข้อมูล — ' + r.name;
+  document.getElementById('modalSub').textContent   = r.empCode + ' | ' + r.date + ' ' + r.time;
+
+  document.getElementById('modalOverlay').classList.add('active');
+  document.getElementById('modalPanel').classList.add('active');
+}
+
+function calcAmount() {
+  const h = parseFloat(document.getElementById('editHours').value) || 0;
+  const p = parseFloat(document.getElementById('editUnitPrice').value) || 0;
+  document.getElementById('editAmount').value = (h * p).toFixed(2);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+  document.getElementById('modalPanel').classList.remove('active');
+  editingId = null;
+}
+
+function changTrip(delta) {
+  const input = document.getElementById('editTrip');
+  const val = Math.max(0, parseInt(input.value || 0) + delta);
+  input.value = val;
+}
+
+function saveEdit() {
+  if (!editingId) return;
+  const idx = tableData.findIndex(x => x.id === editingId);
+  if (idx === -1) return;
+
+  const startSMUval = document.getElementById('editStartSMU').value.trim();
+  const endSMUval   = document.getElementById('editEndSMU').value.trim();
+
+  const updated = {
+    contractor: document.getElementById('editContractor').value.trim(),
+    type:       document.getElementById('editType').value.trim(),
+    wpsId:      document.getElementById('editWpsId').value.trim(),
+    shift:      document.getElementById('editShift').value,
+    startSMU:   startSMUval || '—',
+    endSMU:     endSMUval   || '—',
+    hours:      parseFloat(document.getElementById('editHours').value) || 0,
+    standby:    document.getElementById('editStandby').value.trim(),
+    unitPrice:  parseFloat(document.getElementById('editUnitPrice').value) || 0,
+    amount:     parseFloat(document.getElementById('editAmount').value) || 0,
+    trip:       parseInt(document.getElementById('editTrip').value) || 0,
+    remark:     document.getElementById('editRemark').value.trim()
+  };
+
+  // แสดง loading บนปุ่ม Save
+  const saveBtn = document.querySelector('.btn-save');
+  const origHTML = saveBtn.innerHTML;
+  saveBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> กำลังบันทึก...';
+  saveBtn.disabled = true;
+
+  // ส่งไป GAS ด้วย POST — ใช้ sheetRow (row จริงใน Sheet) ไม่ใช่ id
+  const row = tableData[idx];
+  fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      action:   'updateRow',
+      sheetRow: row.sheetRow,  // ← row จริงใน Google Sheet
+      data:     updated
+    })
+  })
+  .then(r => r.json())
+  .then(res => {
+    saveBtn.innerHTML = origHTML;
+    saveBtn.disabled  = false;
+
+    if (res.ok) {
+      // อัปเดต local state
+      Object.assign(tableData[idx], updated);
+      filterData();
+      closeModal();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกสำเร็จ!',
+        html: `<div style="font-family:'IBM Plex Sans Thai',sans-serif;font-size:14px;color:#495057">
+                 อัปเดต Google Sheet เรียบร้อยแล้ว
+               </div>`,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#1971c2',
+        timer: 2500,
+        timerProgressBar: true,
+      });
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'บันทึกไม่สำเร็จ',
+        html: `<div style="font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;color:#e03131">${res.message || 'ไม่ทราบสาเหตุ'}</div>`,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#e03131',
+      });
+    }
+  })
+  .catch(err => {
+    saveBtn.innerHTML = origHTML;
+    saveBtn.disabled  = false;
+    Swal.fire({
+      icon: 'error',
+      title: 'เชื่อมต่อไม่ได้',
+      html: `<div style="font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;color:#e03131">${err.message}</div>`,
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#e03131',
+    });
+  });
+}
+
+/* ===== DELETE ===== */
+function openDelete(id) {
+  deletingId = id;
+  const r = tableData.find(x => x.id === id);
+  if (r) {
+    document.getElementById('deleteSubText').innerHTML =
+      `ต้องการลบข้อมูลของ <strong>${r.name}</strong> (${r.empCode})<br>การดำเนินการนี้ไม่สามารถย้อนกลับได้`;
+  }
+  document.getElementById('deleteOverlay').classList.add('active');
+}
+function cancelDelete() {
+  document.getElementById('deleteOverlay').classList.remove('active');
+  deletingId = null;
+}
+function confirmDelete() {
+  if (!deletingId) return;
+  tableData = tableData.filter(x => x.id !== deletingId);
+  document.getElementById('deleteOverlay').classList.remove('active');
+  deletingId = null;
+  filterData();
+  showToast('🗑️ ลบข้อมูลเรียบร้อยแล้ว', 'error');
+}
+
+/* ===== FILTER ===== */
+function filterData() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  displayData = tableData.filter(r => {
+    const matchSearch = !q ||
+      r.name.toLowerCase().includes(q) ||
+      r.empCode.toLowerCase().includes(q) ||
+      r.dept.toLowerCase().includes(q) ||
+      r.position.toLowerCase().includes(q);
+    const matchContractor = !selectedContractor || r.contractor === selectedContractor;
+    return matchSearch && matchContractor;
+  });
+  renderTable(displayData);
+}
+function resetFilter() {
+  document.getElementById('searchInput').value = '';
+  selectedContractor = '';
+  document.getElementById('contractorLabel').textContent = 'Contractor ทั้งหมด';
+  displayData = [...tableData];
+  renderTable(displayData);
+}
+
+/* ===== CONTRACTOR DROPDOWN ===== */
+function getContractors() {
+  return Array.from(new Set(tableData.map(r => r.contractor).filter(Boolean))).sort();
+}
+function buildContractorList() {}
+function buildDropdown(list) {
+  document.getElementById('ddList').innerHTML = [
+    `<div class="dd-item ${selectedContractor===''?'selected':''}" onclick="selectContractor('')">
+      <span class="dd-check">${selectedContractor===''?'✓':''}</span><span>ทั้งหมด</span></div>`,
+    ...list.map(c =>
+      `<div class="dd-item ${selectedContractor===c?'selected':''}" onclick="selectContractor('${c.replace(/'/g,"\\'")}')">
+        <span class="dd-check">${selectedContractor===c?'✓':''}</span><span>${c}</span></div>`)
+  ].join('');
+}
+function toggleDropdown() {
+  const wrap = document.getElementById('contractorWrap');
+  const isOpen = wrap.classList.toggle('open');
+  if (isOpen) {
+    buildDropdown(getContractors());
+    document.getElementById('ddSearch').value = '';
+    setTimeout(() => document.getElementById('ddSearch').focus(), 50);
+  }
+}
+function filterDropdown(q) {
+  buildDropdown(getContractors().filter(c => c.toLowerCase().includes(q.toLowerCase())));
+}
+function selectContractor(val) {
+  selectedContractor = val;
+  document.getElementById('contractorLabel').textContent = val || 'Contractor ทั้งหมด';
+  document.getElementById('contractorWrap').classList.remove('open');
+  filterData();
+}
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('contractorWrap');
+  if (!wrap.contains(e.target)) wrap.classList.remove('open');
+});
+
+/* ===== TOAST ===== */
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ===== LIGHTBOX ===== */
+function openLightbox(src, rowId, picType) {
+  const r = tableData.find(x => x.id === rowId);
+  document.getElementById('lightboxImg').src = src;
+
+  if (r) {
+    const isStart = picType === 'start';
+    const smuVal  = isStart ? r.startSMU : r.endSMU;
+    const label   = isStart ? 'START SMU' : 'END SMU';
+    const lblEl   = document.getElementById('lightboxSmuLabel');
+    const valEl   = document.getElementById('lightboxSmuValue');
+    lblEl.textContent = label;
+    lblEl.className   = 'lb-smu-label ' + (isStart ? 'start' : 'end');
+    valEl.textContent = smuVal || '—';
+  }
+
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+
+/* ===== PIC ZOOM ===== */
+function openZoom(url) {
+  document.getElementById('zoomImg').src = url;
+  document.getElementById('zoomOverlay').classList.add('active');
+}
+function closeZoom() {
+  document.getElementById('zoomOverlay').classList.remove('active');
+}
+
+/* ===== LOADING STATES ===== */
+function showLoading() {
+  document.getElementById('tableBody').innerHTML = `
+    <tr><td colspan="20" style="text-align:center;padding:50px 20px">
+      <div style="display:inline-flex;flex-direction:column;align-items:center;gap:12px;color:var(--text-muted)">
+        <div style="width:36px;height:36px;border:3px solid #e9ecef;border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        <span style="font-size:13px;font-weight:600">กำลังโหลดข้อมูล...</span>
+      </div>
+    </td></tr>`;
+}
+function showError(msg) {
+  document.getElementById('tableBody').innerHTML = `
+    <tr><td colspan="20" style="text-align:center;padding:50px 20px">
+      <div style="display:inline-flex;flex-direction:column;align-items:center;gap:10px;color:var(--danger)">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style="font-size:13px;font-weight:600">${msg}</span>
+        <button onclick="loadData(true)" style="margin-top:4px;padding:6px 16px;background:var(--accent2);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">ลองใหม่</button>
+      </div>
+    </td></tr>`;
+}
+
+/* =============================================
+   LOAD DATA FROM GAS
+   showSpinner=true  → ครั้งแรก / กด manual
+   showSpinner=false → silent poll (auto)
+============================================= */
+async function loadData(showSpinner = true) {
+  if (rtIsLoading) return;
+  rtIsLoading = true;
+
+  if (showSpinner) showLoading();
+
+  try {
+    const res  = await fetch(GAS_URL + '?action=getSheetData&t=' + Date.now());
+    const text = await res.text();
+
+    let json;
+    try { json = JSON.parse(text); }
+    catch(e) {
+      if (showSpinner) showError('GAS ตอบกลับไม่ใช่ JSON<br><small>' + text.substring(0,120) + '</small>');
+      return;
+    }
+
+    if (!json.ok) {
+      if (showSpinner) showError('GAS Error: ' + (json.message || 'ไม่ทราบสาเหตุ'));
+      return;
+    }
+
+    const rawRows = json.rows || [];
+    if (!rawRows.length) {
+      if (showSpinner) showError('Sheet ว่างเปล่า หรือยังไม่มีข้อมูล');
+      return;
+    }
+
+    const isArray = Array.isArray(rawRows[0]);
+    const newData = rawRows.map((r, i) => {
+      const sheetRow = i + 2; // row จริงใน Sheet (row 1 = header, ข้อมูลเริ่ม row 2)
+      if (isArray) {
+        return {
+          id: i+1,
+          sheetRow,             // ← เก็บ row จริงใน Sheet ไว้ใช้ตอน update
+          date:       String(r[0]  || '').trim(),
+          time:       String(r[1]  || '').trim(),
+          empCode:    String(r[2]  || '').trim(),
+          name:       String(r[3]  || '').trim(),
+          dept:       String(r[4]  || '').trim(),
+          position:   String(r[5]  || '').trim(),
+          contractor: String(r[6]  || '').trim(),
+          type:       String(r[7]  || '').trim(),
+          wpsId:      String(r[8]  || '').trim(),
+          shift:      String(r[9]  || '').trim(),
+          startSMU:   String(r[10] || '').trim() || '—',
+          picStart:   fixImgUrl(r[11]),
+          endSMU:     String(r[12] || '').trim() || '—',
+          picEnd:     fixImgUrl(r[13]),
+          hours:      parseFloat(r[14]) || 0,
+          standby:    (()=>{ const v=String(r[15]||'').toLowerCase(); return v==='yes'||v==='true'||v==='1'; })(),
+          unitPrice:  parseFloat(r[16]) || 0,
+          amount:     parseFloat(r[17]) || 0,
+          trip:       parseInt(r[18])   || 0,
+          remark:     String(r[19] || '').trim()
+        };
+      }
+      return {
+        id:         i+1,
+        sheetRow,             // ← เก็บ row จริงใน Sheet ไว้ใช้ตอน update
+        date:       String(r.date        || '').trim(),
+        time:       String(r.time        || '').trim(),
+        empCode:    String(r.empCode     || r.lid    || r.code || '').trim(),
+        name:       String(r.name        || r.fullname || '').trim(),
+        dept:       String(r.dept        || r.department || '').trim(),
+        position:   String(r.position    || r.pos    || '').trim(),
+        contractor: String(r.contractor  || '').trim(),
+        type:       String(r.type        || '').trim(),
+        wpsId:      String(r.wpsId       || r.dz     || r.code || '').trim(),
+        shift:      String(r.shift       || '').trim(),
+        startSMU:   String(r.startSMU    || r.startSmu || '').trim() || '—',
+        picStart:   fixImgUrl(r.picStart || r.startImageUrl),
+        endSMU:     String(r.endSMU      || r.endSmu || '').trim() || '—',
+        picEnd:     fixImgUrl(r.picEnd || r.endImageUrl),
+        hours:      parseFloat(r.hours   ?? r.qty  ?? 0) || 0,
+        standby:    (()=>{ const v=String(r.standby||'').toLowerCase(); return v==='yes'||v==='true'||v==='1'; })(),
+        unitPrice:  parseFloat(r.unitPrice ?? r.phr ?? 0) || 0,
+        amount:     parseFloat(r.amount  ?? 0) || 0,
+        trip:       parseInt(r.trip_s    ?? r.trip ?? 0) || 0,
+        remark:     String(r.remark      || '').trim()
+      };
+    }).filter(r => r.date);
+
+    if (!newData.length) {
+      if (showSpinner) showError('ไม่พบข้อมูล (หลัง filter แถวว่าง)');
+      return;
+    }
+
+    /* อัปเดตตารางเฉพาะเมื่อข้อมูลเปลี่ยน (silent poll) */
+    const changed = newData.length !== rtPrevCount ||
+      JSON.stringify(newData.map(r=>r.id+r.amount+r.hours)) !==
+      JSON.stringify(tableData.map(r=>r.id+r.amount+r.hours));
+
+    if (showSpinner || changed) {
+      tableData   = newData;
+      rtPrevCount = newData.length;
+      buildContractorList();
+      filterData();
+      const badge = document.getElementById('liveCount');
+      if (badge) badge.textContent = tableData.length + ' รายการ';
+    }
+
+  } catch (err) {
+    if (showSpinner) showError('ไม่สามารถเชื่อมต่อได้<br><small>' + err.message + '</small>');
+    console.warn('[poll]', err.message);
+  } finally {
+    rtIsLoading = false;
+  }
+}
+
+/* ===== CSS SPIN ===== */
+const spinStyle = document.createElement('style');
+spinStyle.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(spinStyle);
+
+/* ===== INIT ===== */
+loadData(true);       // โหลดครั้งแรก (แสดง spinner)
+startSilentPoll();    // เริ่ม poll เงียบๆ ทุก 10 วินาที
+</script>
+</body>
+</html>
